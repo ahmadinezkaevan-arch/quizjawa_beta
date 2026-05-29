@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "157280276783",
+    "project_id": "quizjatim-2db59",
+    "storage_bucket": "quizjatim-2db59.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:157280276783:android:a67b95501bb5dea5e251da",
+        "android_client_info": {
+          "package_name": "com.example.quizjatimsem2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "157280276783-31f6a5bqb838k0vm350rd7cfple6esad.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDx2dwnaf0UcoYwznOwRJVn262BGcwemc4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "157280276783-31f6a5bqb838k0vm350rd7cfple6esad.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
