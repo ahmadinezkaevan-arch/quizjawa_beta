@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../modules/landing/bindings/landing_binding.dart';
@@ -46,7 +48,7 @@ part 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.LANDING;
+  static const INITIAL = Routes.MAIN;
 
   static final routes = [
     // ── Landing ───────────────────────────────────────────
@@ -114,15 +116,18 @@ class AppPages {
       name: _Paths.QUIZ,
       page: () => const QuizView(),
       binding: QuizBinding(),
+      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: _Paths.RESULT,
       page: () => const ResultView(),
       binding: QuizBinding(),
+      middlewares: [AuthGuard()],
     ),
     GetPage(
       name: _Paths.ANSWER_REVIEW,
       page: () => const AnswerReviewView(),
+      middlewares: [AuthGuard()],
     ),
 
     // ── Leaderboard ───────────────────────────────────────
@@ -158,4 +163,15 @@ class AppPages {
       binding: SearchBinding(),
     ),
   ];
+}
+
+class AuthGuard extends GetMiddleware {
+  @override
+  RouteSettings? redirect(String? route) {
+    if (FirebaseAuth.instance.currentUser == null) {
+      return const RouteSettings(name: Routes.LANDING);
+    }
+
+    return null;
+  }
 }

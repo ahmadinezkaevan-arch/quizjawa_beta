@@ -1,66 +1,60 @@
-import 'dart:convert';
-
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../../data/services/firestore_service.dart';
 
 class FavoriteController extends GetxController {
-  static const _storageKey = 'favorite_quizzes';
+  final FirestoreService _service = FirestoreService();
 
   final RxList<Map<String, String>> favoriteList = <Map<String, String>>[].obs;
+  final RxBool isLoading = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    _loadFavorites();
+    loadFavorites();
   }
 
-  bool isFavorite(String title) {
-    return favoriteList.any((item) => item['title'] == title);
+  // Cek favorit berdasarkan id (atau title sebagai fallback)
+  bool isFavorite(String titleOrId) {
+    return favoriteList.any(
+      (item) => item['id'] == titleOrId || item['title'] == titleOrId,
+    );
   }
 
-  void toggleFavorite(Map<String, String> quiz) {
-    final index = favoriteList.indexWhere(
-      (item) => item['title'] == quiz['title'],
+  // Load dari Firestore
+  Future<void> loadFavorites() async {
+    try {
+      isLoading.value = true;
+      final result = await _service.getFavorites();
+      favoriteList.assignAll(result);
+    } catch (e) {
+      print('Error loadFavorites: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Toggle favorit
+  Future<void> toggleFavorite(Map<String, String> quiz) async {
+    final id = quiz['id'] ?? quiz['title'] ?? '';
+
+    final existingIndex = favoriteList.indexWhere(
+      (item) => item['id'] == id || item['title'] == quiz['title'],
     );
 
-    if (index == -1) {
-      favoriteList.add(quiz);
+    if (existingIndex == -1) {
+      // Tambah secara optimistis ke list lokal dulu
+      favoriteList.add({...quiz, 'id': id});
+      await _service.addFavorite(quiz);
     } else {
-      favoriteList.removeAt(index);
-    }
-
-    _saveFavorites();
-  }
-
-  void addFavorite(Map<String, String> quiz) {
-    if (!isFavorite(quiz['title'] ?? '')) {
-      favoriteList.add(quiz);
-      _saveFavorites();
+      // Hapus secara optimistis dari list lokal dulu
+      favoriteList.removeAt(existingIndex);
+      await _service.removeFavorite(id);
     }
   }
 
-  Future<void> _loadFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedFavorites = prefs.getString(_storageKey);
-    if (savedFavorites == null) return;
-
-    final decoded = jsonDecode(savedFavorites);
-    if (decoded is! List) return;
-
-    favoriteList.assignAll(
-      decoded
-          .whereType<Map>()
-          .map(
-            (item) => item.map(
-              (key, value) => MapEntry(key.toString(), value.toString()),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Future<void> _saveFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, jsonEncode(favoriteList));
+  // Dipakai saat pindah akun — reset list lokal lalu reload
+  Future<void> refreshForCurrentUser() async {
+    favoriteList.clear();
+    await loadFavorites();
   }
 }

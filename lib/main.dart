@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'app/routes/app_pages.dart';
 
@@ -10,10 +9,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  final initialRoute = FirebaseAuth.instance.currentUser == null
-      ? Routes.LANDING
-      : Routes.MAIN;
-  runApp(MyApp(initialRoute: initialRoute));
+  runApp(const MyApp(initialRoute: Routes.MAIN));
 }
 
 class MyApp extends StatelessWidget {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controllers/profile_controller.dart';
 import '../../../routes/app_pages.dart';
 
 class ProfileView extends StatelessWidget {
@@ -7,7 +8,9 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Data histori quiz statis
+    final ProfileController controller = Get.find<ProfileController>();
+
+    // Data histori quiz statis (belum diimplementasi per-akun)
     final List<Map<String, String>> historyList = [
       {
         'title':       'Rumah Joglo',
@@ -36,102 +39,125 @@ class ProfileView extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // ── Foto Profil + Tombol Edit ──────────────
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/profil.png'),
-                      fit: BoxFit.cover,
-                    ),
-                    border: Border.all(color: Colors.white, width: 4),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Get.toNamed(Routes.EDIT_PROFILE),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF583410),
+      body: Obx(() {
+        // ── Loading ──────────────────────────────────
+        if (controller.isLoadingProfile.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF583410)),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // ── Foto Profil + Tombol Edit ──────────
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.edit,
-                      color: Colors.white,
-                      size: 18,
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/profil.png'),
+                        fit: BoxFit.cover,
+                      ),
+                      border: Border.all(color: Colors.white, width: 4),
                     ),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── Nama ──────────────────────────────────
-            const Text(
-              'Darlene Robertson',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF4A3728),
+                  GestureDetector(
+                    onTap: () => Get.toNamed(Routes.EDIT_PROFILE),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF583410),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 24),
 
-            // ── Statistik ─────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'Quiz Terselesaikan',
-                    value: '2',
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _StatCard(
-                    label: 'Skor Rata-rata',
-                    value: '80%',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 12),
 
-            // ── Histori Quiz ───────────────────────────
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Histori quiz',
-                style: TextStyle(
-                  fontSize: 18,
+              // ── Nama (dari Firestore) ──────────────
+              Obx(() => Text(
+                controller.username.value.isNotEmpty
+                    ? controller.username.value
+                    : 'Belum ada nama',
+                style: const TextStyle(
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF4A3728),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
+              )),
 
-            ...historyList.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _HistoryCard(
-                title:       item['title']!,
-                description: item['description']!,
-                image:       item['image']!,
+              const SizedBox(height: 4),
+
+              // ── Email (dari Firebase Auth) ─────────
+              Obx(() => Text(
+                controller.email.value,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: const Color(0xFF4A3728).withValues(alpha: 0.7),
+                ),
+              )),
+
+              const SizedBox(height: 24),
+
+              // ── Statistik ──────────────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Quiz Terselesaikan',
+                      value: '2',
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Skor Rata-rata',
+                      value: '80%',
+                    ),
+                  ),
+                ],
               ),
-            )),
-          ],
-        ),
-      ),
+              const SizedBox(height: 32),
+
+              // ── Histori Quiz ───────────────────────
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Histori quiz',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4A3728),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              ...historyList.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _HistoryCard(
+                  title:       item['title']!,
+                  description: item['description']!,
+                  image:       item['image']!,
+                ),
+              )),
+            ],
+          ),
+        );
+      }),
     );
   }
 }
@@ -202,7 +228,6 @@ class _HistoryCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Thumbnail
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.asset(
@@ -219,7 +244,6 @@ class _HistoryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Konten
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

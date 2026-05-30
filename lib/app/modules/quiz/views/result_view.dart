@@ -1,17 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/quiz_controller.dart';
+import '../../main/controllers/main_controller.dart';
+import '../../../data/services/firestore_service.dart';
 import '../../../routes/app_pages.dart';
 
-class ResultView extends StatelessWidget {
+class ResultView extends StatefulWidget {
   const ResultView({super.key});
 
   @override
+  State<ResultView> createState() => _ResultViewState();
+}
+
+class _ResultViewState extends State<ResultView> {
+  final FirestoreService _service = FirestoreService();
+  bool _submitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _submitScore();
+  }
+
+  Future<void> _submitScore() async {
+    final args       = Get.arguments as Map<String, dynamic>;
+    final int correct = args['correctAnswers'];
+    final int total   = args['totalQuestions'];
+    final int score   = ((correct / total) * 100).round();
+    await _service.submitScore(score);
+    if (mounted) setState(() => _submitted = true);
+  }
+
+  void _goToHome() {
+    if (Get.isRegistered<MainController>()) {
+      Get.find<MainController>().changeTab(0);
+    }
+    Get.offAllNamed(Routes.MAIN);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Ambil data hasil dari arguments yang dikirim QuizController
-    final args           = Get.arguments as Map<String, dynamic>;
-    final int correct    = args['correctAnswers'];
-    final int total      = args['totalQuestions'];
+    final args       = Get.arguments as Map<String, dynamic>;
+    final int correct = args['correctAnswers'];
+    final int total   = args['totalQuestions'];
     final List questions = args['questions'];
     final List answers   = args['userAnswers'];
     final int wrong      = total - correct;
@@ -22,6 +53,10 @@ class ResultView extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Color(0xFF583410)),
+          onPressed: _goToHome,
+        ),
         title: const Text(
           'Hasil Quiz',
           style: TextStyle(
@@ -32,133 +67,160 @@ class ResultView extends StatelessWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 10),
 
-              // ── Foto Profil ──────────────────────────
-              Container(
-                width: 110,
-                height: 110,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/profil.png'),
-                    fit: BoxFit.cover,
-                  ),
+            // ── Foto Profil ──────────────────────────
+            Container(
+              width: 110,
+              height: 110,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: AssetImage('assets/images/profil.png'),
+                  fit: BoxFit.cover,
                 ),
               ),
+            ),
 
-              // ── Selamat ──────────────────────────────
-              const Text(
-                'Selamat!',
-                style: TextStyle(
-                  color: Color(0xFF5D3A1A),
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
+            // ── Selamat ──────────────────────────────
+            const Text(
+              'Selamat!',
+              style: TextStyle(
+                color: Color(0xFF5D3A1A),
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
               ),
-              Text(
-                'Anda berhasil menyelesaikan Kuis Rumah Adat!\nBerikut adalah hasil Anda',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: const Color(0xFF5D3A1A).withValues(alpha: 0.8),
-                  fontSize: 16,
-                ),
+            ),
+            Text(
+              'Kamu berhasil menyelesaikan quiz!\nBerikut adalah hasilmu',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: const Color(0xFF5D3A1A).withValues(alpha: 0.8),
+                fontSize: 16,
               ),
-              const SizedBox(height: 15),
+            ),
+            const SizedBox(height: 15),
 
-              // ── Skor Akhir ───────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5D3A1A).withValues(alpha: 0.77),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.13),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Skor Akhir',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      '$percentage%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // ── Benar & Salah ────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(label: 'Benar', value: '$correct'),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(label: 'Salah', value: '$wrong'),
+            // ── Skor Akhir ───────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF5D3A1A).withValues(alpha: 0.77),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.13),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              const SizedBox(height: 40),
+              child: Column(
+                children: [
+                  const Text(
+                    'Skor Akhir',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '$percentage%',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // Indikator submit skor
+                  if (!_submitted)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.check_circle,
+                              color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Skor tersimpan ke leaderboard',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
 
-              // ── Tombol Main Lagi ─────────────────────
-              _ActionButton(
-                label: 'Main Lagi',
-                color: const Color(0xFF5D3A1A),
-                onTap: () {
-                  // Reset controller lalu ke halaman detail
-                  Get.find<QuizController>().resetQuiz();
-                  Get.offNamed(Routes.DETAIL);
+            // ── Benar & Salah ────────────────────────
+            Row(
+              children: [
+                Expanded(child: _StatCard(label: 'Benar', value: '$correct')),
+                const SizedBox(width: 16),
+                Expanded(child: _StatCard(label: 'Salah',  value: '$wrong')),
+              ],
+            ),
+            const SizedBox(height: 40),
+
+            // ── Tombol Main Lagi ─────────────────────
+            _ActionButton(
+              label: 'Main Lagi',
+              color: const Color(0xFF5D3A1A),
+              onTap: () {
+                Get.find<QuizController>().resetQuiz();
+                Get.offNamed(Routes.DETAIL);
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // ── Tombol Lihat Jawaban ─────────────────
+            _ActionButton(
+              label: 'Lihat Jawaban Anda',
+              color: const Color(0xFF5D3A1A).withValues(alpha: 0.77),
+              onTap: () => Get.toNamed(
+                Routes.ANSWER_REVIEW,
+                arguments: {
+                  'questions':   questions,
+                  'userAnswers': answers,
                 },
               ),
-              const SizedBox(height: 12),
+            ),
+            const SizedBox(height: 12),
 
-              // ── Tombol Lihat Jawaban ─────────────────
-              _ActionButton(
-                label: 'Lihat Jawaban Anda',
-                color: const Color(0xFF5D3A1A).withValues(alpha: 0.77),
-                onTap: () => Get.toNamed(
-                  Routes.ANSWER_REVIEW,
-                  arguments: {
-                    'questions':   questions,
-                    'userAnswers': answers,
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
+            // ── Tombol Leaderboard ───────────────────
+            _ActionButton(
+              label: 'Lihat Papan Peringkat',
+              color: const Color(0xFF5D3A1A).withValues(alpha: 0.5),
+              onTap: () => Get.toNamed(Routes.LEADERBOARD),
+            ),
 
-              // ── Tombol Leaderboard ───────────────────
-              _ActionButton(
-                label: 'Kamu Peringkat 3 di Leaderboard!',
-                color: const Color(0xFF5D3A1A).withValues(alpha: 0.5),
-                onTap: () => Get.toNamed(Routes.LEADERBOARD),
-              ),
-
-              const SizedBox(height: 24),
-            ],
-          ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -168,7 +230,6 @@ class ResultView extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
-
   const _StatCard({required this.label, required this.value});
 
   @override
@@ -214,9 +275,8 @@ class _StatCard extends StatelessWidget {
 // ── Widget Action Button ───────────────────────────────
 class _ActionButton extends StatelessWidget {
   final String label;
-  final Color color;
+  final Color  color;
   final VoidCallback onTap;
-
   const _ActionButton({
     required this.label,
     required this.color,

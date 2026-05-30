@@ -1,12 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import '../../../routes/app_pages.dart';
+import '../../../data/services/firestore_service.dart';
 
 class AuthController extends GetxController {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth    _auth    = FirebaseAuth.instance;
+  final FirestoreService _service = FirestoreService();
 
   // State observable
-  final RxBool isLoading        = false.obs;
+  final RxBool   isLoading      = false.obs;
   final RxString errorMessage   = ''.obs;
 
   // ── Login ──────────────────────────────────────────
@@ -39,10 +41,18 @@ class AuthController extends GetxController {
       isLoading.value    = true;
       errorMessage.value = '';
 
-      await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email:    email.trim(),
         password: password.trim(),
       );
+
+      // Buat dokumen user di Firestore
+      if (credential.user != null) {
+        await _service.createUserIfNotExists(
+          credential.user!.uid,
+          email.trim(),
+        );
+      }
 
       // Berhasil → ke halaman utama
       Get.offAllNamed(Routes.MAIN);

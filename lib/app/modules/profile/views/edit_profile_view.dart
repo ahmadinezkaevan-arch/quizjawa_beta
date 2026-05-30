@@ -65,27 +65,29 @@ class EditProfileView extends StatelessWidget {
 
             // ── Form Username ─────────────────────────
             _buildField(
-              label:      'Username',
-              controller: controller.usernameController,
-              icon:       Icons.person_outline,
+              label:        'Username',
+              controller:   controller.usernameController,
+              icon:         Icons.person_outline,
               primaryColor: primaryColor,
+              readOnly:     false,
             ),
 
-            // ── Form Email ────────────────────────────
+            // ── Email (read-only, dari Firebase Auth) ─
             _buildField(
-              label:      'Email',
-              controller: controller.emailController,
-              icon:       Icons.email_outlined,
+              label:        'Email',
+              controller:   controller.emailController,
+              icon:         Icons.email_outlined,
               primaryColor: primaryColor,
+              readOnly:     true,   // email tidak bisa diubah di sini
             ),
 
-            // ── Form Password (dengan toggle visibility) ─
+            // ── Form Password ─────────────────────────
             Obx(() => _buildField(
-              label:           'Password Baru',
-              controller:      controller.passwordController,
-              icon:            Icons.lock_outline,
-              primaryColor:    primaryColor,
-              isPassword:      true,
+              label:            'Password Baru',
+              controller:       controller.passwordController,
+              icon:             Icons.lock_outline,
+              primaryColor:     primaryColor,
+              isPassword:       true,
               isPasswordHidden: controller.isPasswordHidden.value,
               onTogglePassword: controller.togglePasswordVisibility,
             )),
@@ -142,12 +144,12 @@ class EditProfileView extends StatelessWidget {
     );
   }
 
-  // ── Widget Input Field ─────────────────────────────────
   Widget _buildField({
     required String label,
     required TextEditingController controller,
     required IconData icon,
     required Color primaryColor,
+    bool readOnly             = false,
     bool isPassword           = false,
     bool isPasswordHidden     = true,
     VoidCallback? onTogglePassword,
@@ -155,9 +157,13 @@ class EditProfileView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: readOnly
+            ? const Color(0xFF583410).withValues(alpha: 0.05)
+            : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: const Color(0xFF583410).withValues(alpha: 0.3),
+        ),
         boxShadow: [
           BoxShadow(
             color: primaryColor.withValues(alpha: 0.05),
@@ -167,9 +173,14 @@ class EditProfileView extends StatelessWidget {
         ],
       ),
       child: TextField(
-        controller: controller,
+        controller:  controller,
         obscureText: isPassword ? isPasswordHidden : false,
-        style: TextStyle(color: primaryColor),
+        readOnly:    readOnly,
+        style: TextStyle(
+          color: readOnly
+              ? primaryColor.withValues(alpha: 0.5)
+              : primaryColor,
+        ),
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: primaryColor),
           suffixIcon: isPassword
@@ -182,9 +193,16 @@ class EditProfileView extends StatelessWidget {
                   ),
                   onPressed: onTogglePassword,
                 )
-              : null,
-          labelText: label,
-          labelStyle: TextStyle(color: primaryColor),
+              : (readOnly
+                  ? Icon(Icons.lock, size: 18,
+                      color: primaryColor.withValues(alpha: 0.4))
+                  : null),
+          labelText:  label,
+          labelStyle: TextStyle(
+            color: readOnly
+                ? primaryColor.withValues(alpha: 0.5)
+                : primaryColor,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 18),
         ),
