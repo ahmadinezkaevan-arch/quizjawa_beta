@@ -10,20 +10,6 @@ class ProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     final ProfileController controller = Get.find<ProfileController>();
 
-    // Data histori quiz statis (belum diimplementasi per-akun)
-    final List<Map<String, String>> historyList = [
-      {
-        'title':       'Rumah Joglo',
-        'description': 'Uji pengetahuan mu mengenai rumah Joglo!',
-        'image':       'assets/images/rumahjoglo.png',
-      },
-      {
-        'title':       'Pakaian Adat',
-        'description': 'Kenali jenis-jenis pakaian adat dari berbagai daerah di pulau Jawa.',
-        'image':       'assets/images/pakaianadat.png',
-      },
-    ];
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -40,7 +26,6 @@ class ProfileView extends StatelessWidget {
         centerTitle: true,
       ),
       body: Obx(() {
-        // ── Loading ──────────────────────────────────
         if (controller.isLoadingProfile.value) {
           return const Center(
             child: CircularProgressIndicator(color: Color(0xFF583410)),
@@ -87,7 +72,7 @@ class ProfileView extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // ── Nama (dari Firestore) ──────────────
+              // ── Nama ──────────────────────────────
               Obx(() => Text(
                 controller.username.value.isNotEmpty
                     ? controller.username.value
@@ -101,7 +86,7 @@ class ProfileView extends StatelessWidget {
 
               const SizedBox(height: 4),
 
-              // ── Email (dari Firebase Auth) ─────────
+              // ── Email ──────────────────────────────
               Obx(() => Text(
                 controller.email.value,
                 style: TextStyle(
@@ -113,30 +98,33 @@ class ProfileView extends StatelessWidget {
               const SizedBox(height: 24),
 
               // ── Statistik ──────────────────────────
-              Row(
+              Obx(() => Row(
                 children: [
                   Expanded(
                     child: _StatCard(
                       label: 'Quiz Terselesaikan',
-                      value: '2',
+                      value: '${controller.totalQuizzes.value}',
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _StatCard(
                       label: 'Skor Rata-rata',
-                      value: '80%',
+                      value: controller.totalQuizzes.value > 0
+                          ? '${controller.averageScore.value}%'
+                          : '-',
                     ),
                   ),
                 ],
-              ),
+              )),
+
               const SizedBox(height: 32),
 
               // ── Histori Quiz ───────────────────────
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Histori quiz',
+                  'Histori Quiz',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -146,14 +134,67 @@ class ProfileView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              ...historyList.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _HistoryCard(
-                  title:       item['title']!,
-                  description: item['description']!,
-                  image:       item['image']!,
-                ),
-              )),
+              Obx(() {
+                // Loading history
+                if (controller.isLoadingHistory.value) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF583410),
+                      ),
+                    ),
+                  );
+                }
+
+                // Belum ada history
+                if (controller.historyList.isEmpty) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF583410).withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.quiz_outlined,
+                          size: 52,
+                          color: const Color(0xFF583410).withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Kamu belum mengerjakan quiz.\nYuk mulai quiz pertamamu!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: const Color(0xFF583410).withValues(alpha: 0.6),
+                            fontSize: 14,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                // Ada history
+                return Column(
+                  children: controller.historyList
+                      .map((item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _HistoryCard(
+                              title:       item['quizTitle']       ?? '',
+                              description: item['quizDescription'] ?? '',
+                              image:       item['quizImage']       ?? '',
+                              score:       item['score']           ?? 0,
+                            ),
+                          ))
+                      .toList(),
+                );
+              }),
+
+              const SizedBox(height: 20),
             ],
           ),
         );
@@ -185,6 +226,7 @@ class _StatCard extends StatelessWidget {
               fontSize: 12,
               color: Color(0xFF583410),
             ),
+            textAlign: TextAlign.center,
           ),
           Text(
             value,
@@ -205,11 +247,13 @@ class _HistoryCard extends StatelessWidget {
   final String title;
   final String description;
   final String image;
+  final int    score;
 
   const _HistoryCard({
     required this.title,
     required this.description,
     required this.image,
+    required this.score,
   });
 
   @override
@@ -228,80 +272,86 @@ class _HistoryCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Thumbnail
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.asset(
               image,
               width: 100,
-              height: 122,
+              height: 110,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
                 width: 100,
-                height: 122,
+                height: 110,
                 color: const Color(0xFF583410),
-                child: const Icon(Icons.home, color: Colors.white, size: 40),
+                child: const Icon(Icons.quiz, color: Colors.white, size: 40),
               ),
             ),
           ),
           const SizedBox(width: 12),
+          // Konten
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Color(0xFF583410),
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          color: const Color(0xFF583410).withValues(alpha: 0.7),
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Color(0xFF583410),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12, right: 12),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: const Color(0xFF583410).withValues(alpha: 0.7),
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  // Badge skor
+                  Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
+                      horizontal: 10,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF583410),
-                      borderRadius: BorderRadius.circular(6),
+                      color: _scoreColor(score).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _scoreColor(score).withValues(alpha: 0.4),
+                      ),
                     ),
-                    child: const Text(
-                      'Mulai',
+                    child: Text(
+                      'Skor: $score%',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: _scoreColor(score),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
+          const SizedBox(width: 12),
         ],
       ),
     );
+  }
+
+  // Warna badge berdasarkan skor
+  Color _scoreColor(int score) {
+    if (score >= 80) return const Color(0xFF2E7D32); // hijau
+    if (score >= 60) return const Color(0xFFF57F17); // kuning
+    return const Color(0xFFC62828);                  // merah
   }
 }

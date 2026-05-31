@@ -6,11 +6,10 @@ import '../../../routes/app_pages.dart';
 class QuizController extends GetxController {
   final FirestoreService _service = FirestoreService();
 
-  // ── State observable ───────────────────────────────
   final RxList<QuestionModel> questions = <QuestionModel>[].obs;
-  final RxBool isLoading               = true.obs;
-  final RxString errorMessage          = ''.obs;
-  final RxString quizTitle             = ''.obs;
+  final RxBool   isLoading     = true.obs;
+  final RxString errorMessage  = ''.obs;
+  final RxString quizTitle     = ''.obs;
 
   final currentIndex   = 0.obs;
   final correctAnswers = 0.obs;
@@ -19,17 +18,21 @@ class QuizController extends GetxController {
   late List<String?> userAnswers;
   late String quizId;
 
+  // Simpan info quiz untuk dikirim ke ResultView & history
+  String _quizImage       = '';
+  String _quizDescription = '';
+
   @override
   void onInit() {
     super.onInit();
-    // Ambil quizId dari arguments yang dikirim DetailView
-    final args = Get.arguments as Map<String, dynamic>?;
-    quizId         = args?['quizId']    ?? '';
-    quizTitle.value = args?['quizTitle'] ?? 'Quiz';
+    final args           = Get.arguments as Map<String, dynamic>?;
+    quizId               = args?['quizId']          ?? '';
+    quizTitle.value      = args?['quizTitle']        ?? 'Quiz';
+    _quizImage           = args?['quizImage']        ?? '';
+    _quizDescription     = args?['quizDescription']  ?? '';
     fetchQuestions();
   }
 
-  // ── Fetch soal dari Firestore ──────────────────────
   Future<void> fetchQuestions() async {
     try {
       isLoading.value    = true;
@@ -44,13 +47,11 @@ class QuizController extends GetxController {
     }
   }
 
-  // ── Getter helper ──────────────────────────────────
   QuestionModel get currentQuestion => questions[currentIndex.value];
   int           get totalQuestions  => questions.length;
   bool          get isLastQuestion  => currentIndex.value == totalQuestions - 1;
   bool          get canProceed      => selectedAnswer.value != null;
 
-  // ── Actions ────────────────────────────────────────
   void selectAnswer(String answer) {
     selectedAnswer.value = answer;
   }
@@ -71,10 +72,13 @@ class QuizController extends GetxController {
       Get.offNamed(
         Routes.RESULT,
         arguments: {
-          'correctAnswers': correctAnswers.value,
-          'totalQuestions': totalQuestions,
-          'questions':      questions.toList(),
-          'userAnswers':    userAnswers,
+          'correctAnswers':  correctAnswers.value,
+          'totalQuestions':  totalQuestions,
+          'questions':       questions.toList(),
+          'userAnswers':     userAnswers,
+          // Info quiz untuk history
+          'quizImage':       _quizImage,
+          'quizDescription': _quizDescription,
         },
       );
     }

@@ -9,12 +9,20 @@ class ProfileController extends GetxController {
   final FirestoreService _service = FirestoreService();
 
   // State observable
-  final isPasswordHidden = true.obs;
+  final isPasswordHidden  = true.obs;
   final RxString username = ''.obs;
   final RxString email    = ''.obs;
   final RxBool   isLoadingProfile = true.obs;
 
-  // Form controllers — nilainya diisi setelah data dimuat
+  // Stats
+  final RxInt totalQuizzes  = 0.obs;
+  final RxInt averageScore  = 0.obs;
+
+  // History
+  final RxList<Map<String, dynamic>> historyList = <Map<String, dynamic>>[].obs;
+  final RxBool isLoadingHistory = true.obs;
+
+  // Form controllers
   final usernameController = TextEditingController();
   final emailController    = TextEditingController();
   final passwordController = TextEditingController();
@@ -23,25 +31,47 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     loadProfile();
+    loadStatsAndHistory();
   }
 
-  // ── Load profil dari Firebase Auth + Firestore ─────
+  // ── Load profil ────────────────────────────────────
   Future<void> loadProfile() async {
     try {
       isLoadingProfile.value = true;
+      email.value            = _auth.currentUser?.email ?? '';
+      emailController.text   = email.value;
 
-      // Email langsung dari Auth
-      email.value = _auth.currentUser?.email ?? '';
-      emailController.text = email.value;
-
-      // Username dari Firestore
-      final data = await _service.getUserProfile();
-      username.value = data?['username'] ?? '';
+      final data             = await _service.getUserProfile();
+      username.value         = data?['username'] ?? '';
       usernameController.text = username.value;
     } catch (e) {
       print('Error loadProfile: $e');
     } finally {
       isLoadingProfile.value = false;
+    }
+  }
+
+  // ── Load stats & history ───────────────────────────
+  Future<void> loadStatsAndHistory() async {
+    try {
+      isLoadingHistory.value = true;
+
+      // Jalankan parallel
+      final results = await Future.wait([
+        _service.getUserStats(),
+        _service.getQuizHistory(),
+      ]);
+
+      final stats   = results[0] as Map<String, dynamic>;
+      final history = results[1] as List<Map<String, dynamic>>;
+
+      totalQuizzes.value = stats['totalQuizzes'] as int;
+      averageScore.value = stats['averageScore'] as int;
+      historyList.assignAll(history);
+    } catch (e) {
+      print('Error loadStatsAndHistory: $e');
+    } finally {
+      isLoadingHistory.value = false;
     }
   }
 

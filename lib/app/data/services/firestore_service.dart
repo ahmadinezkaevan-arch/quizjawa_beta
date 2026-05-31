@@ -11,7 +11,7 @@ class FirestoreService {
   final FirebaseAuth      _auth = FirebaseAuth.instance;
 
   String? get _uid       => _auth.currentUser?.uid;
-  String? get currentUid => _auth.currentUser?.uid; // public untuk controller
+  String? get currentUid => _auth.currentUser?.uid;
 
   // ════════════════════════════════════════════════════
   // QUIZ
@@ -173,6 +173,92 @@ class FirestoreService {
   }
 
   // ════════════════════════════════════════════════════
+  // QUIZ HISTORY  (koleksi: users/{uid}/history/{auto-id})
+  // ════════════════════════════════════════════════════
+
+  // Simpan riwayat setiap kali user selesai quiz
+  Future<void> saveQuizHistory({
+    required String quizId,
+    required String quizTitle,
+    required String quizImage,
+    required String quizDescription,
+    required int    score,
+  }) async {
+    if (_uid == null) return;
+    try {
+      await _db
+          .collection('users')
+          .doc(_uid)
+          .collection('history')
+          .add({
+        'quizId':          quizId,
+        'quizTitle':       quizTitle,
+        'quizImage':       quizImage,
+        'quizDescription': quizDescription,
+        'score':           score,
+        'playedAt':        FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error saveQuizHistory: $e');
+    }
+  }
+
+  // Ambil semua riwayat quiz — diurutkan terbaru dulu
+  Future<List<Map<String, dynamic>>> getQuizHistory() async {
+    if (_uid == null) return [];
+    try {
+      final snapshot = await _db
+          .collection('users')
+          .doc(_uid)
+          .collection('history')
+          .orderBy('playedAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'quizId':          data['quizId']          ?? '',
+          'quizTitle':       data['quizTitle']        ?? '',
+          'quizImage':       data['quizImage']        ?? '',
+          'quizDescription': data['quizDescription']  ?? '',
+          'score':           (data['score'] as num?)?.toInt() ?? 0,
+        };
+      }).toList();
+    } catch (e) {
+      print('Error getQuizHistory: $e');
+      return [];
+    }
+  }
+
+  // Hitung stats: total quiz dikerjakan & rata-rata skor
+  Future<Map<String, dynamic>> getUserStats() async {
+    if (_uid == null) return {'totalQuizzes': 0, 'averageScore': 0};
+    try {
+      final snapshot = await _db
+          .collection('users')
+          .doc(_uid)
+          .collection('history')
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {'totalQuizzes': 0, 'averageScore': 0};
+      }
+
+      final scores = snapshot.docs
+          .map((doc) => (doc.data()['score'] as num?)?.toInt() ?? 0)
+          .toList();
+
+      final total   = scores.length;
+      final average = (scores.reduce((a, b) => a + b) / total).round();
+
+      return {'totalQuizzes': total, 'averageScore': average};
+    } catch (e) {
+      print('Error getUserStats: $e');
+      return {'totalQuizzes': 0, 'averageScore': 0};
+    }
+  }
+
+  // ════════════════════════════════════════════════════
   // LEADERBOARD  (koleksi: leaderboard/{uid})
   // ════════════════════════════════════════════════════
 
@@ -180,10 +266,9 @@ class FirestoreService {
   Future<void> submitScore(int score) async {
     if (_uid == null) return;
     try {
-      // Ambil username terbaru dari Firestore
-      final profileDoc = await _db.collection('users').doc(_uid).get();
+      final profileDoc  = await _db.collection('users').doc(_uid).get();
       final usernameRaw = profileDoc.data()?['username'] as String?;
-      final username = (usernameRaw != null && usernameRaw.trim().isNotEmpty)
+      final username    = (usernameRaw != null && usernameRaw.trim().isNotEmpty)
           ? usernameRaw.trim()
           : _auth.currentUser?.email ?? 'Anonim';
 
@@ -191,7 +276,6 @@ class FirestoreService {
       final existing = await ref.get();
 
       if (!existing.exists) {
-        // Belum pernah masuk leaderboard — langsung simpan
         await ref.set({
           'uid':       _uid,
           'username':  username,
@@ -202,14 +286,12 @@ class FirestoreService {
         final currentScore =
             (existing.data()?['score'] as num?)?.toInt() ?? 0;
         if (score > currentScore) {
-          // Skor baru lebih tinggi — update skor & username
           await ref.update({
             'username':  username,
             'score':     score,
             'updatedAt': FieldValue.serverTimestamp(),
           });
         } else {
-          // Skor tidak lebih tinggi — tetap update username kalau berubah
           await ref.update({'username': username});
         }
       }

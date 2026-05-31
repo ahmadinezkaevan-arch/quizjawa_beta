@@ -10,7 +10,6 @@ class DetailTariView extends StatelessWidget {
   Widget build(BuildContext context) {
     final DetailController controller = Get.find<DetailController>();
 
-    // Ambil data dari arguments yang dikirim HomeView / SearchView
     final args           = Get.arguments as Map<String, dynamic>?;
     final String quizId    = args?['quizId']    ?? 'tarian_adat';
     final String quizTitle = args?['quizTitle'] ?? 'Tari Topeng Cirebon';
@@ -27,67 +26,51 @@ class DetailTariView extends StatelessWidget {
         'Tari ini menjadi salah satu warisan budaya Indonesia yang masih dijaga sampai sekarang. '
         'Selain sebagai seni pertunjukan, Tari Topeng Cirebon juga mengajarkan nilai kehidupan seperti kesabaran, keberanian, dan pengendalian diri.';
     final String quizImage = args?['quizImage'] ?? 'assets/images/tari_topeng_cirebon.png';
+
     controller.setQuiz({
-      'id': quizId,
-      'title': quizTitle,
+      'id':          quizId,
+      'title':       quizTitle,
       'description': quizDesc,
-      'image': quizImage,
+      'image':       quizImage,
     });
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ── Header Image ───────────────────────────────
           Stack(
             children: [
-              // Gambar — dinamis dari quizImage
               SizedBox(
                 height: 280,
                 width: double.infinity,
                 child: Image.asset(
                   quizImage,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: const Color(0xFF583410),
-                  ),
+                  errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF583410)),
                 ),
               ),
-
-              // Rounded corner bawah
               Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
+                bottom: 0, left: 0, right: 0,
                 child: Container(
                   height: 30,
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
+                      topLeft:  Radius.circular(24),
                       topRight: Radius.circular(24),
                     ),
                   ),
                 ),
               ),
-
-              // Tombol kembali
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: GestureDetector(
                     onTap: () => Get.back(),
                     child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back,
-                        color: Color(0xFF583410),
-                      ),
+                      width: 40, height: 40,
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      child: const Icon(Icons.arrow_back, color: Color(0xFF583410)),
                     ),
                   ),
                 ),
@@ -95,7 +78,6 @@ class DetailTariView extends StatelessWidget {
             ],
           ),
 
-          // ── Konten ────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -103,59 +85,29 @@ class DetailTariView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Judul + views + favorit ────────
                     Row(
                       children: [
-                        // Judul — dinamis dari quizTitle
                         Expanded(
-                          child: Text(
-                            quizTitle,
-                            style: const TextStyle(
-                              color: Color(0xFF583410),
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: Text(quizTitle, style: const TextStyle(color: Color(0xFF583410), fontSize: 28, fontWeight: FontWeight.bold)),
                         ),
-                        // Views
                         Row(
                           children: [
-                            const Icon(
-                              Icons.play_circle_outline,
-                              color: Color(0xFF583410),
-                              size: 20,
-                            ),
+                            const Icon(Icons.play_circle_outline, color: Color(0xFF583410), size: 20),
                             const SizedBox(width: 4),
-                            Text(
-                              '123',
-                              style: TextStyle(
-                                color: const Color(0xFF583410).withValues(alpha: 0.7),
-                                fontSize: 16,
-                              ),
-                            ),
+                            Text('123', style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.7), fontSize: 16)),
                           ],
                         ),
                         const SizedBox(width: 16),
-                        // Favorit — Obx agar icon reaktif
                         Obx(() => GestureDetector(
                           onTap: controller.toggleFavorite,
                           child: Row(
                             children: [
                               Icon(
-                                controller.isFavorite.value
-                                    ? Icons.bookmark
-                                    : Icons.bookmark_border,
-                                color: Colors.yellow,
-                                size: 20,
+                                controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
+                                color: Colors.yellow, size: 20,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                '789',
-                                style: TextStyle(
-                                  color: const Color(0xFF583410).withValues(alpha: 0.7),
-                                  fontSize: 16,
-                                ),
-                              ),
+                              Text('789', style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.7), fontSize: 16)),
                             ],
                           ),
                         )),
@@ -163,69 +115,33 @@ class DetailTariView extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 15),
-
-                    // ── Deskripsi — dinamis dari quizDesc ──
-                    const Text(
-                      'Deskripsi',
-                      style: TextStyle(
-                        color: Color(0xFF583410),
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    const Text('Deskripsi', style: TextStyle(color: Color(0xFF583410), fontSize: 20, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 5),
-                    Text(
-                      quizDesc,
-                      style: TextStyle(
-                        color: const Color(0xFF583410).withValues(alpha: 0.8),
-                        fontSize: 15,
-                      ),
-                      textAlign: TextAlign.justify,
-                    ),
-
+                    Text(quizDesc, style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.8), fontSize: 15), textAlign: TextAlign.justify),
                     const SizedBox(height: 32),
 
-                    // ── Tombol share, favorit, mainkan ──
                     Row(
                       children: [
-                        // Share
                         GestureDetector(
                           onTap: () => Get.toNamed(Routes.LEADERBOARD),
                           child: Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.share_outlined,
-                              color: Color(0xFF583410),
-                              size: 35,
-                            ),
+                            width: 56, height: 56,
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                            child: const Icon(Icons.share_outlined, color: Color(0xFF583410), size: 35),
                           ),
                         ),
-                        // Favorit
                         Obx(() => GestureDetector(
                           onTap: controller.toggleFavorite,
                           child: Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            width: 56, height: 56,
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                             child: Icon(
-                              controller.isFavorite.value
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_border,
-                              color: Colors.yellow,
-                              size: 40,
+                              controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
+                              color: Colors.yellow, size: 40,
                             ),
                           ),
                         )),
                         const SizedBox(width: 120),
-                        // Mainkan — kirim quizId & quizTitle ke QuizView
                         Expanded(
                           child: SizedBox(
                             height: 56,
@@ -233,31 +149,24 @@ class DetailTariView extends StatelessWidget {
                               onPressed: () => Get.toNamed(
                                 Routes.QUIZ,
                                 arguments: {
-                                  'quizId':    quizId,
-                                  'quizTitle': quizTitle,
+                                  'quizId':          quizId,
+                                  'quizTitle':       quizTitle,
+                                  'quizImage':       quizImage,       // ← untuk history
+                                  'quizDescription': quizDesc,        // ← untuk history
                                 },
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF583410),
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 elevation: 0,
                               ),
-                              child: const Text(
-                                'Mainkan',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: const Text('Mainkan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 24),
                   ],
                 ),

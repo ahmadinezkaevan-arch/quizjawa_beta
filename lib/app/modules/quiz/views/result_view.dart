@@ -19,18 +19,37 @@ class _ResultViewState extends State<ResultView> {
   @override
   void initState() {
     super.initState();
-    _submitScore();
+    _submitAll();
   }
 
-  Future<void> _submitScore() async {
-    final args       = Get.arguments as Map<String, dynamic>;
+  Future<void> _submitAll() async {
+    final args        = Get.arguments as Map<String, dynamic>;
     final int correct = args['correctAnswers'];
     final int total   = args['totalQuestions'];
     final int score   = ((correct / total) * 100).round();
-    await _service.submitScore(score);
+
+    final QuizController quizCtrl  = Get.find<QuizController>();
+    final String quizId            = quizCtrl.quizId;
+    final String quizTitle         = quizCtrl.quizTitle.value;
+    final String quizImage         = args['quizImage']       ?? '';
+    final String quizDescription   = args['quizDescription'] ?? '';
+
+    // Jalankan parallel: submit leaderboard + simpan history
+    await Future.wait([
+      _service.submitScore(score),
+      _service.saveQuizHistory(
+        quizId:          quizId,
+        quizTitle:       quizTitle,
+        quizImage:       quizImage,
+        quizDescription: quizDescription,
+        score:           score,
+      ),
+    ]);
+
     if (mounted) setState(() => _submitted = true);
   }
 
+  // Diambil dari kode kamu — navigasi ke home setelah selesai
   void _goToHome() {
     if (Get.isRegistered<MainController>()) {
       Get.find<MainController>().changeTab(0);
@@ -40,7 +59,7 @@ class _ResultViewState extends State<ResultView> {
 
   @override
   Widget build(BuildContext context) {
-    final args       = Get.arguments as Map<String, dynamic>;
+    final args        = Get.arguments as Map<String, dynamic>;
     final int correct = args['correctAnswers'];
     final int total   = args['totalQuestions'];
     final List questions = args['questions'];
@@ -53,6 +72,7 @@ class _ResultViewState extends State<ResultView> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
+        // Diambil dari kode kamu — tombol X untuk kembali ke home
         leading: IconButton(
           icon: const Icon(Icons.close, color: Color(0xFF583410)),
           onPressed: _goToHome,
@@ -139,7 +159,6 @@ class _ResultViewState extends State<ResultView> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // Indikator submit skor
                   if (!_submitted)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 6),
@@ -158,11 +177,14 @@ class _ResultViewState extends State<ResultView> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle,
-                              color: Colors.white, size: 14),
+                          const Icon(
+                            Icons.check_circle,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            'Skor tersimpan ke leaderboard',
+                            'Skor tersimpan',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.85),
                               fontSize: 12,
@@ -226,7 +248,6 @@ class _ResultViewState extends State<ResultView> {
   }
 }
 
-// ── Widget Stat Card ───────────────────────────────────
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -272,7 +293,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ── Widget Action Button ───────────────────────────────
 class _ActionButton extends StatelessWidget {
   final String label;
   final Color  color;
