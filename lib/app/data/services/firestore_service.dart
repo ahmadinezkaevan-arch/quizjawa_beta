@@ -1,6 +1,10 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 import '../models/quiz_model.dart';
+import '../../core/config/cloudinary_config.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -75,6 +79,7 @@ class FirestoreService {
         await ref.set({
           'email':     email,
           'username':  '',
+          'photoUrl':  '',
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
@@ -94,7 +99,6 @@ class FirestoreService {
     }
   }
 
-  // set+merge: aman meski dokumen users/{uid} belum ada (akun lama)
   Future<void> updateUsername(String username) async {
     if (_uid == null) return;
     try {
@@ -108,6 +112,66 @@ class FirestoreService {
     } catch (e) {
       print('Error updateUsername: $e');
       rethrow;
+    }
+  }
+
+  // ════════════════════════════════════════════════════
+  // CLOUDINARY — Upload foto profil
+  // ════════════════════════════════════════════════════
+
+  /// Upload [imageFile] ke Cloudinary (unsigned preset).
+  /// Simpan URL ke Firestore users & leaderboard.
+  /// Return URL foto, atau null jika gagal.
+  Future<String?> uploadProfilePhoto(File imageFile) async {
+    if (_uid == null) return null;
+    try {
+      final uri = Uri.parse(CloudinaryConfig.uploadUrl);
+
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['upload_preset'] = CloudinaryConfig.uploadPreset
+        ..fields['public_id']     = 'profile_photos/$_uid'
+        ..files.add(
+            await http.MultipartFile.fromPath('file', imageFile.path));
+
+      final streamedResponse = await request.send();
+      final body             = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode != 200) {
+        print('Cloudinary upload error ${streamedResponse.statusCode}: $body');
+        return null;
+      }
+
+      final json     = jsonDecode(body) as Map<String, dynamic>;
+      final String url = json['secure_url'] as String;
+
+      // Simpan ke Firestore users/{uid}
+      await _db.collection('users').doc(_uid).set(
+        {'photoUrl': url},
+        SetOptions(merge: true),
+      );
+
+      // Perbarui leaderboard/{uid} jika sudah ada
+      final lbRef = _db.collection('leaderboard').doc(_uid);
+      final lbDoc = await lbRef.get();
+      if (lbDoc.exists) {
+        await lbRef.update({'photoUrl': url});
+      }
+
+      return url;
+    } catch (e) {
+      print('Error uploadProfilePhoto: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getProfilePhotoUrl() async {
+    if (_uid == null) return null;
+    try {
+      final doc = await _db.collection('users').doc(_uid).get();
+      return doc.data()?['photoUrl'] as String?;
+    } catch (e) {
+      print('Error getProfilePhotoUrl: $e');
+      return null;
     }
   }
 
@@ -173,10 +237,9 @@ class FirestoreService {
   }
 
   // ════════════════════════════════════════════════════
-  // QUIZ HISTORY  (koleksi: users/{uid}/history/{auto-id})
+  // QUIZ HISTORY
   // ════════════════════════════════════════════════════
 
-  // Simpan riwayat setiap kali user selesai quiz
   Future<void> saveQuizHistory({
     required String quizId,
     required String quizTitle,
@@ -203,7 +266,6 @@ class FirestoreService {
     }
   }
 
-  // Ambil semua riwayat quiz — diurutkan terbaru dulu
   Future<List<Map<String, dynamic>>> getQuizHistory() async {
     if (_uid == null) return [];
     try {
@@ -213,7 +275,6 @@ class FirestoreService {
           .collection('history')
           .orderBy('playedAt', descending: true)
           .get();
-
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return {
@@ -230,7 +291,6 @@ class FirestoreService {
     }
   }
 
-  // Hitung stats: total quiz dikerjakan & rata-rata skor
   Future<Map<String, dynamic>> getUserStats() async {
     if (_uid == null) return {'totalQuizzes': 0, 'averageScore': 0};
     try {
@@ -239,18 +299,14 @@ class FirestoreService {
           .doc(_uid)
           .collection('history')
           .get();
-
       if (snapshot.docs.isEmpty) {
         return {'totalQuizzes': 0, 'averageScore': 0};
       }
-
       final scores = snapshot.docs
           .map((doc) => (doc.data()['score'] as num?)?.toInt() ?? 0)
           .toList();
-
       final total   = scores.length;
       final average = (scores.reduce((a, b) => a + b) / total).round();
-
       return {'totalQuizzes': total, 'averageScore': average};
     } catch (e) {
       print('Error getUserStats: $e');
@@ -259,18 +315,19 @@ class FirestoreService {
   }
 
   // ════════════════════════════════════════════════════
-  // LEADERBOARD  (koleksi: leaderboard/{uid})
+  // LEADERBOARD
   // ════════════════════════════════════════════════════
 
-  // Submit skor — hanya simpan jika skor baru lebih tinggi dari sebelumnya
   Future<void> submitScore(int score) async {
     if (_uid == null) return;
     try {
       final profileDoc  = await _db.collection('users').doc(_uid).get();
-      final usernameRaw = profileDoc.data()?['username'] as String?;
+      final data        = profileDoc.data();
+      final usernameRaw = data?['username'] as String?;
       final username    = (usernameRaw != null && usernameRaw.trim().isNotEmpty)
           ? usernameRaw.trim()
           : _auth.currentUser?.email ?? 'Anonim';
+      final photoUrl = data?['photoUrl'] as String? ?? '';
 
       final ref      = _db.collection('leaderboard').doc(_uid);
       final existing = await ref.get();
@@ -279,6 +336,7 @@ class FirestoreService {
         await ref.set({
           'uid':       _uid,
           'username':  username,
+          'photoUrl':  photoUrl,
           'score':     score,
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -288,11 +346,12 @@ class FirestoreService {
         if (score > currentScore) {
           await ref.update({
             'username':  username,
+            'photoUrl':  photoUrl,
             'score':     score,
             'updatedAt': FieldValue.serverTimestamp(),
           });
         } else {
-          await ref.update({'username': username});
+          await ref.update({'username': username, 'photoUrl': photoUrl});
         }
       }
     } catch (e) {
@@ -300,7 +359,6 @@ class FirestoreService {
     }
   }
 
-  // Ambil leaderboard — realtime stream diurutkan skor tertinggi
   Stream<List<Map<String, dynamic>>> leaderboardStream() {
     return _db
         .collection('leaderboard')
@@ -311,6 +369,7 @@ class FirestoreService {
                   'uid':      doc.id,
                   'username': doc.data()['username'] ?? 'Anonim',
                   'score':    (doc.data()['score'] as num?)?.toInt() ?? 0,
+                  'photoUrl': doc.data()['photoUrl'] ?? '',
                 })
             .toList());
   }

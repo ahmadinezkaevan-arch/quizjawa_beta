@@ -40,18 +40,53 @@ class ProfileView extends StatelessWidget {
               Stack(
                 alignment: Alignment.bottomRight,
                 children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      image: const DecorationImage(
-                        image: AssetImage('assets/images/profil.png'),
-                        fit: BoxFit.cover,
+                  // Avatar — tampilkan dari URL kalau ada, fallback ke asset
+                  Obx(() {
+                    final url = controller.photoUrl.value;
+                    return Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
                       ),
-                      border: Border.all(color: Colors.white, width: 4),
-                    ),
-                  ),
+                      child: ClipOval(
+                        child: url.isNotEmpty
+                            ? Image.network(
+                                url,
+                                fit: BoxFit.cover,
+                                width: 120,
+                                height: 120,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return Container(
+                                    color: const Color(0xFF583410)
+                                        .withValues(alpha: 0.1),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Color(0xFF583410),
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stack) =>
+                                    Image.asset(
+                                  'assets/images/profil.png',
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Image.asset(
+                                'assets/images/profil.png',
+                                fit: BoxFit.cover,
+                                width: 120,
+                                height: 120,
+                              ),
+                      ),
+                    );
+                  }),
+
+                  // Tombol edit
                   GestureDetector(
                     onTap: () => Get.toNamed(Routes.EDIT_PROFILE),
                     child: Container(
@@ -135,7 +170,6 @@ class ProfileView extends StatelessWidget {
               const SizedBox(height: 16),
 
               Obx(() {
-                // Loading history
                 if (controller.isLoadingHistory.value) {
                   return const Center(
                     child: Padding(
@@ -147,7 +181,6 @@ class ProfileView extends StatelessWidget {
                   );
                 }
 
-                // Belum ada history
                 if (controller.historyList.isEmpty) {
                   return Container(
                     width: double.infinity,
@@ -178,7 +211,6 @@ class ProfileView extends StatelessWidget {
                   );
                 }
 
-                // Ada history
                 return Column(
                   children: controller.historyList
                       .map((item) => Padding(
@@ -272,7 +304,6 @@ class _HistoryCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Thumbnail
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.asset(
@@ -289,7 +320,6 @@ class _HistoryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Konten
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -316,7 +346,6 @@ class _HistoryCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  // Badge skor
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -348,10 +377,9 @@ class _HistoryCard extends StatelessWidget {
     );
   }
 
-  // Warna badge berdasarkan skor
   Color _scoreColor(int score) {
-    if (score >= 80) return const Color(0xFF2E7D32); // hijau
-    if (score >= 60) return const Color(0xFFF57F17); // kuning
-    return const Color(0xFFC62828);                  // merah
+    if (score >= 80) return const Color(0xFF2E7D32);
+    if (score >= 60) return const Color(0xFFF57F17);
+    return const Color(0xFFC62828);
   }
 }

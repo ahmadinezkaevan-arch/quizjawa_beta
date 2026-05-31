@@ -33,35 +33,106 @@ class EditProfileView extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // ── Foto Profil ──────────────────────────
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                CircleAvatar(
-                  radius: 55,
-                  backgroundColor: primaryColor.withValues(alpha: 0.1),
-                  child: const Icon(
-                    Icons.person,
-                    size: 60,
-                    color: primaryColor,
-                  ),
+            // ── Foto Profil — bisa diklik ────────────
+            Obx(() {
+              final url      = controller.photoUrl.value;
+              final uploading = controller.isUploadingPhoto.value;
+
+              return GestureDetector(
+                onTap: uploading ? null : controller.pickAndUploadPhoto,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    // Avatar
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: primaryColor, width: 2.5),
+                        color: primaryColor.withValues(alpha: 0.1),
+                      ),
+                      child: ClipOval(
+                        child: uploading
+                            // Tampilkan loading spinner saat upload
+                            ? Container(
+                                color: primaryColor.withValues(alpha: 0.15),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF583410),
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                              )
+                            : url.isNotEmpty
+                                // Tampilkan foto dari URL (Network)
+                                ? Image.network(
+                                    url,
+                                    fit: BoxFit.cover,
+                                    width: 110,
+                                    height: 110,
+                                    loadingBuilder: (context, child, progress) {
+                                      if (progress == null) return child;
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF583410),
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stack) =>
+                                        const Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: primaryColor,
+                                    ),
+                                  )
+                                // Default: tampilkan asset lama
+                                : Image.asset(
+                                    'assets/images/profil.png',
+                                    fit: BoxFit.cover,
+                                    width: 110,
+                                    height: 110,
+                                    errorBuilder: (context, error, stack) =>
+                                        const Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                      ),
+                    ),
+                    // Tombol kamera
+                    if (!uploading)
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                  ],
                 ),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+              );
+            }),
+
+            const SizedBox(height: 8),
+
+            // Label petunjuk
+            Text(
+              'Ketuk foto untuk mengubah',
+              style: TextStyle(
+                color: const Color(0xFF583410).withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
 
             // ── Form Username ─────────────────────────
             _buildField(
@@ -72,16 +143,16 @@ class EditProfileView extends StatelessWidget {
               readOnly:     false,
             ),
 
-            // ── Email (read-only, dari Firebase Auth) ─
+            // ── Email (read-only) ─────────────────────
             _buildField(
               label:        'Email',
               controller:   controller.emailController,
               icon:         Icons.email_outlined,
               primaryColor: primaryColor,
-              readOnly:     true,   // email tidak bisa diubah di sini
+              readOnly:     true,
             ),
 
-            // ── Form Password ─────────────────────────
+            // ── Password ──────────────────────────────
             Obx(() => _buildField(
               label:            'Password Baru',
               controller:       controller.passwordController,

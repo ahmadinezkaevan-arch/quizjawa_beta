@@ -147,7 +147,7 @@ class DetailView extends StatelessWidget {
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                             child: Icon(
                               controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                              color: Colors.yellow, size: 40,
+                              color: const Color(0xFFD4A045), size: 40,
                             ),
                           ),
                         )),
