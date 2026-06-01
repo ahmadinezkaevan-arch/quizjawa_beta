@@ -100,13 +100,6 @@ class DetailView extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Row(
-                          children: [
-                            const Icon(Icons.play_circle_outline, color: Color(0xFF583410), size: 20),
-                            const SizedBox(width: 4),
-                            Text('123', style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.7), fontSize: 16)),
-                          ],
-                        ),
                         const SizedBox(width: 16),
                         Obx(() => GestureDetector(
                           onTap: controller.toggleFavorite,
@@ -114,10 +107,8 @@ class DetailView extends StatelessWidget {
                             children: [
                               Icon(
                                 controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                                color: Colors.yellow, size: 20,
+                                color: const Color.fromARGB(255, 255, 255, 255), size: 20,
                               ),
-                              const SizedBox(width: 4),
-                              Text('789', style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.7), fontSize: 16)),
                             ],
                           ),
                         )),

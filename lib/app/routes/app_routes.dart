@@ -3,6 +3,7 @@ part of 'app_pages.dart';
 abstract class Routes {
   Routes._();
 
+  static const SPLASH        = _Paths.SPLASH;       // ← BARU
   static const LANDING       = _Paths.LANDING;
   static const LOGIN         = _Paths.LOGIN;
   static const SIGNUP        = _Paths.SIGNUP;
@@ -26,6 +27,7 @@ abstract class Routes {
 abstract class _Paths {
   _Paths._();
 
+  static const SPLASH        = '/splash';            // ← BARU
   static const LANDING       = '/';
   static const LOGIN         = '/login';
   static const SIGNUP        = '/signup';

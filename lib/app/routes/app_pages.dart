@@ -2,6 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../modules/splash/bindings/splash_binding.dart';        // ← BARU
+import '../modules/splash/views/splash_view.dart';              // ← BARU
+
 import '../modules/landing/bindings/landing_binding.dart';
 import '../modules/landing/views/landing_view.dart';
 
@@ -11,9 +14,6 @@ import '../modules/auth/views/signup_view.dart';
 
 import '../modules/main/bindings/main_binding.dart';
 import '../modules/main/views/main_view.dart';
-
-//import '../modules/home/bindings/home_binding.dart';
-//import '../modules/home/views/home_view.dart';
 
 import '../modules/detail/bindings/detail_binding.dart';
 import '../modules/detail/views/detail_view.dart';
@@ -48,9 +48,18 @@ part 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.MAIN;
+  // ← DIUBAH: INITIAL sekarang ke SPLASH
+  static const INITIAL = Routes.SPLASH;
 
   static final routes = [
+    // ── Splash ────────────────────────────────────────────  ← BARU
+    GetPage(
+      name: _Paths.SPLASH,
+      page: () => const SplashView(),
+      binding: SplashBinding(),
+      transition: Transition.noTransition,
+    ),
+
     // ── Landing ───────────────────────────────────────────
     GetPage(
       name: _Paths.LANDING,
@@ -77,7 +86,7 @@ class AppPages {
       binding: MainBinding(),
     ),
 
-    // ── Home ──────────────────────────────────────────────
+    // ── Detail ────────────────────────────────────────────
     GetPage(
       name: _Paths.DETAIL,
       page: () => const DetailView(),
@@ -168,10 +177,11 @@ class AppPages {
 class AuthGuard extends GetMiddleware {
   @override
   RouteSettings? redirect(String? route) {
+    // Hanya redirect ke LANDING saat user belum login
+    // Home (MAIN) tetap bisa diakses tanpa login
     if (FirebaseAuth.instance.currentUser == null) {
       return const RouteSettings(name: Routes.LANDING);
     }
-
     return null;
   }
 }
