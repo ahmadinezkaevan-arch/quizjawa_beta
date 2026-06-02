@@ -5,6 +5,12 @@ import '../../../data/services/firestore_service.dart';
 
 class HomeController extends GetxController {
   final FirestoreService _service = FirestoreService();
+  static const Set<String> _homeQuizKeys = {
+    'rumah joglo',
+    'rumah_joglo',
+    'tarian adat',
+    'tarian_adat',
+  };
 
   // State observable
   final RxList<QuizModel> quizList   = <QuizModel>[].obs;
@@ -23,11 +29,17 @@ class HomeController extends GetxController {
       isLoading.value    = true;
       errorMessage.value = '';
       final result       = await _service.getAllQuizzes();
-      quizList.assignAll(result);
+      quizList.assignAll(result.where(_isHomeQuiz));
     } catch (e) {
       errorMessage.value = 'Gagal memuat data. Coba lagi.';
     } finally {
       isLoading.value = false;
     }
+  }
+
+  bool _isHomeQuiz(QuizModel quiz) {
+    final id    = quiz.id.toLowerCase();
+    final title = quiz.title.toLowerCase();
+    return _homeQuizKeys.contains(id) || _homeQuizKeys.contains(title);
   }
 }

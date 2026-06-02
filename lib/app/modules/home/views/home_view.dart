@@ -276,15 +276,7 @@ class HomeView extends StatelessWidget {
 
   Widget _buildQuizItem(QuizModel quiz) {
     return GestureDetector(
-      onTap: () => Get.toNamed(
-        Routes.DETAIL,
-        arguments: {
-          'quizId':    quiz.id,
-          'quizTitle': quiz.title,
-          'quizDesc':  quiz.description,
-          'quizImage': quiz.image,
-        },
-      ),
+      onTap: () => Get.toNamed(_getQuizRoute(quiz)),
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.only(right: 12),
@@ -373,5 +365,20 @@ class HomeView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _getQuizRoute(QuizModel quiz) {
+    final id    = quiz.id.toLowerCase();
+    final title = quiz.title.toLowerCase();
+
+    if (id == 'rumah_joglo' || title == 'rumah joglo') {
+      return Routes.RUMAH_ADAT;
+    }
+
+    if (id == 'tarian_adat' || title == 'tarian adat') {
+      return Routes.TARI_ADAT;
+    }
+
+    return Routes.DETAIL;
   }
 }

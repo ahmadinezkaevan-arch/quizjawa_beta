@@ -14,22 +14,27 @@ class SplashView extends GetView<SplashController> {
       body: AnimatedBuilder(
         animation: controller.animationController,
         builder: (context, child) {
-          final double currentOffsetY =
-              controller.phase1OffsetY.value + controller.phase2OffsetY.value;
+          // ── Fix: gunakan phase yang sedang aktif, bukan dijumlah ──
+          // Phase 1 aktif  : 0.00 – 0.32  (logo naik dari bawah ke -0.18)
+          // Phase 2 aktif  : 0.39 – 0.61  (logo turun dari -0.18 ke 0.0)
+          // Di antara 0.32–0.39 animasi sedang "hold", phase1 sudah selesai
+          // di -0.18 dan phase2 belum mulai → gunakan phase1 (sudah clamp di -0.18)
+          final double progress = controller.animationController.value;
+          final double currentOffsetY = progress < 0.39
+              ? controller.phase1OffsetY.value   // phase 1 masih aktif / hold
+              : controller.phase2OffsetY.value;  // phase 2 ambil alih (absolut ke 0.0)
+
           final double currentScale = controller.phase2Scale.value;
 
-          // Phase 3: logo bergeser kiri dari tengah layar
-          // nilai -0.22 * lebar = pergeseran absolut logo ke kiri
-          // Teks mulai di posisi tengah (sama dg logo) lalu geser kanan
-          final double logoShiftX = controller.phase3LogoOffsetX.value;
-          final double textShiftX = controller.phase3TextOffsetX.value;
-          final double textOpacity = controller.phase3TextOpacity.value;
+          // Phase 3 values
+          final double logoShiftX   = controller.phase3LogoOffsetX.value;
+          final double textShiftX   = controller.phase3TextOffsetX.value;
+          final double textOpacity  = controller.phase3TextOpacity.value;
 
           return Stack(
             children: [
               // ────────────────────────────────────────────────────────
-              // Phase 1 & 2 — logo naik dan mengecil
-              // Hanya aktif saat phase3 belum mulai (logoShiftX == 0)
+              // Phase 1 & 2 — logo naik lalu turun ke tengah layar
               // ────────────────────────────────────────────────────────
               if (logoShiftX == 0.0)
                 Positioned.fill(
@@ -53,8 +58,9 @@ class SplashView extends GetView<SplashController> {
                 ),
 
               // ────────────────────────────────────────────────────────
-              // Phase 3 — logo + teks dalam satu Row, keduanya sejajar
-              // Logo geser kiri, teks fade-in dari tengah geser kanan
+              // Phase 3 — logo geser kiri + teks fade-in geser kanan
+              // Keduanya dimulai dari posisi tengah layar (0.0) sehingga
+              // sambungan dari phase 2 selalu sejajar
               // ────────────────────────────────────────────────────────
               if (logoShiftX < 0.0 || textOpacity > 0.0)
                 Positioned.fill(
@@ -63,7 +69,7 @@ class SplashView extends GetView<SplashController> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Logo — geser ke kiri relatif dari posisi tengah Row
+                        // Logo — bergeser ke kiri dari pusat Row
                         Transform.translate(
                           offset: Offset(logoShiftX * 80, 0),
                           child: Image.asset(
@@ -74,10 +80,9 @@ class SplashView extends GetView<SplashController> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Teks — fade-in dari tengah, geser ke kanan
+                        // Teks — fade-in dari posisi logo, geser ke kanan
                         Transform.translate(
                           offset: Offset(
-                            // mulai dari kiri (posisi logo), geser ke posisi aslinya
                             (1.0 - textShiftX / 0.18) * -80,
                             0,
                           ),

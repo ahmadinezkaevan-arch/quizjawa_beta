@@ -40,7 +40,7 @@ class SplashController extends GetxController
       ),
     );
 
-    phase1OffsetY = Tween<double>(begin: 0.6, end: -0.28).animate(
+    phase1OffsetY = Tween<double>(begin: 0.6, end: -0.18).animate(
       CurvedAnimation(
         parent: animationController,
         curve: Interval(0.00, 0.32, curve: Curves.easeOutCubic),
@@ -48,7 +48,7 @@ class SplashController extends GetxController
     );
 
     // ── Phase 2 ──────────────────────────────────────────
-    phase2OffsetY = Tween<double>(begin: -0.28, end: 0.0).animate(
+    phase2OffsetY = Tween<double>(begin: -0.18, end: 0.0).animate(
       CurvedAnimation(
         parent: animationController,
         curve: Interval(0.39, 0.61, curve: Curves.easeInOutCubic),
