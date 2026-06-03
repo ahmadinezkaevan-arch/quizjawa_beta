@@ -30,15 +30,23 @@ class RumahAdatProgressService {
   // ── Ambil jumlah card yang sudah terbuka ──────────────
   // Selalu minimal 1 (card pertama selalu unlocked)
   Future<int> getUnlockedCount() async {
-    if (_progressRef == null) return 1;
+    if (_progressRef == null) {
+      print('[RumahAdat] getUnlockedCount: _progressRef null (uid=$_uid)');
+      return 1;
+    }
     try {
-      final doc = await _progressRef!.get();
-      if (!doc.exists) return 1;
-      final data = doc.data() as Map<String, dynamic>?;
+      final doc  = await _progressRef!.get();
+      if (!doc.exists) {
+        print('[RumahAdat] getUnlockedCount: dokumen belum ada → return 1');
+        return 1;
+      }
+      final data  = doc.data() as Map<String, dynamic>?;
       final count = (data?['unlockedCount'] as num?)?.toInt() ?? 1;
-      return count < 1 ? 1 : count;
+      final result = count < 1 ? 1 : count;
+      print('[RumahAdat] getUnlockedCount: $result');
+      return result;
     } catch (e) {
-      print('Error getUnlockedCount: $e');
+      print('[RumahAdat] Error getUnlockedCount: $e');
       return 1;
     }
   }
@@ -52,24 +60,55 @@ class RumahAdatProgressService {
     required int score,
     required int totalCards,
   }) async {
-    if (_progressRef == null) return false;
-    if (score < 60) return false; // syarat minimum
+    print('[RumahAdat] tryUnlockNext: cardIndex=$currentCardIndex, score=$score, total=$totalCards');
+
+    if (_progressRef == null) {
+      print('[RumahAdat] tryUnlockNext: GAGAL — _progressRef null, uid=$_uid');
+      return false;
+    }
+
+    if (score < 60) {
+      print('[RumahAdat] tryUnlockNext: GAGAL — skor $score < 60');
+      return false;
+    }
 
     try {
       final currentUnlocked = await getUnlockedCount();
-      // Hanya unlock card berikutnya jika card ini adalah yang terakhir terbuka
-      final nextIndex = currentCardIndex + 1;
-      if (nextIndex >= totalCards) return false; // sudah semua terbuka
-      if (nextIndex < currentUnlocked) return false; // sudah terbuka sebelumnya
+      final nextIndex       = currentCardIndex + 1;
+
+      print('[RumahAdat] tryUnlockNext: currentUnlocked=$currentUnlocked, nextIndex=$nextIndex');
+
+      if (nextIndex >= totalCards) {
+        print('[RumahAdat] tryUnlockNext: BATAL — nextIndex=$nextIndex >= totalCards=$totalCards (semua sudah terbuka)');
+        return false;
+      }
+
+      if (nextIndex < currentUnlocked) {
+        print('[RumahAdat] tryUnlockNext: BATAL — nextIndex=$nextIndex sudah terbuka sebelumnya (currentUnlocked=$currentUnlocked)');
+        return false;
+      }
 
       await _progressRef!.set(
         {'unlockedCount': nextIndex + 1},
         SetOptions(merge: true),
       );
+
+      print('[RumahAdat] tryUnlockNext: BERHASIL — unlockedCount di-set ke ${nextIndex + 1}');
       return true;
     } catch (e) {
-      print('Error tryUnlockNext: $e');
+      print('[RumahAdat] Error tryUnlockNext: $e');
       return false;
+    }
+  }
+
+  // ── Reset progress (untuk testing) ───────────────────
+  Future<void> resetProgress() async {
+    if (_progressRef == null) return;
+    try {
+      await _progressRef!.set({'unlockedCount': 1});
+      print('[RumahAdat] resetProgress: unlockedCount di-reset ke 1');
+    } catch (e) {
+      print('[RumahAdat] Error resetProgress: $e');
     }
   }
 }

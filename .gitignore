@@ -12,6 +12,14 @@
 .swiftpm/
 migrate_working_dir/
 
+exports/
+node_modules/
+.serviceAccountKey.json
+.package-lock.json
+.package.json
+.export_firestore.js
+
+
 # IntelliJ related
 *.iml
 *.ipr

@@ -17,23 +17,19 @@ class ResultView extends StatefulWidget {
 }
 
 class _ResultViewState extends State<ResultView> {
-  final FirestoreService           _service          = FirestoreService();
-  final RumahAdatProgressService   _rumahProgress    = RumahAdatProgressService();
-  final TarianAdatProgressService  _tarianProgress   = TarianAdatProgressService();
+  final FirestoreService           _service        = FirestoreService();
+  final RumahAdatProgressService   _rumahProgress  = RumahAdatProgressService();
+  final TarianAdatProgressService  _tarianProgress = TarianAdatProgressService();
 
   bool _submitted = false;
   bool _newUnlock = false;
 
-  // ── Mapping quizId → { cardIndex, totalCards, kategori } ──
-  // Tambahkan entry baru di sini saat quiz baru ditambahkan ke Firestore
   static const Map<String, Map<String, dynamic>> _quizMeta = {
-    // Rumah Adat
-    'rumah_joglo':   {'cardIndex': 0, 'totalCards': 5, 'kategori': 'rumah_adat'},
-    'rumah_limasan': {'cardIndex': 1, 'totalCards': 5, 'kategori': 'rumah_adat'},
-    'rumah_tajug':   {'cardIndex': 2, 'totalCards': 5, 'kategori': 'rumah_adat'},
-    'rumah_baduy':   {'cardIndex': 3, 'totalCards': 5, 'kategori': 'rumah_adat'},
-    'rumah_kebaya':  {'cardIndex': 4, 'totalCards': 5, 'kategori': 'rumah_adat'},
-    // Tarian Adat
+    'rumah_joglo':    {'cardIndex': 0, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_limasan':  {'cardIndex': 1, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_tajug':    {'cardIndex': 2, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_baduy':    {'cardIndex': 3, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_kebaya':   {'cardIndex': 4, 'totalCards': 5, 'kategori': 'rumah_adat'},
     'tarian_adat':    {'cardIndex': 0, 'totalCards': 5, 'kategori': 'tarian_adat'},
     'tarian_saman':   {'cardIndex': 1, 'totalCards': 5, 'kategori': 'tarian_adat'},
     'tarian_kecak':   {'cardIndex': 2, 'totalCards': 5, 'kategori': 'tarian_adat'},
@@ -48,18 +44,27 @@ class _ResultViewState extends State<ResultView> {
   }
 
   Future<void> _submitAll() async {
-    final args      = Get.arguments as Map<String, dynamic>;
+    final args = Get.arguments as Map<String, dynamic>;
+
     final int correct = args['correctAnswers'];
     final int total   = args['totalQuestions'];
     final int score   = ((correct / total) * 100).round();
 
-    final QuizController quizCtrl  = Get.find<QuizController>();
-    final String         quizId    = quizCtrl.quizId;
-    final String         quizTitle = quizCtrl.quizTitle.value;
-    final String         quizImage = args['quizImage']       ?? '';
-    final String         quizDesc  = args['quizDescription'] ?? '';
+    // FIX: baca quizId langsung dari arguments, bukan dari controller
+    // Controller bisa di-recreate oleh QuizBinding saat masuk RESULT
+    final String quizId    = (args['quizId']    as String? ?? '').trim();
+    final String quizTitle = (args['quizTitle'] as String? ?? '').trim();
+    final String quizImage = (args['quizImage'] as String? ?? '').trim();
+    final String quizDesc  = (args['quizDescription'] as String? ?? '').trim();
 
-    // Submit leaderboard + history secara parallel
+    print('[ResultView] quizId="$quizId"');
+    print('[ResultView] score=$score');
+    print('[ResultView] meta=${_quizMeta[quizId]}');
+
+    if (quizId.isEmpty) {
+      print('[ResultView] WARNING: quizId kosong!');
+    }
+
     await Future.wait([
       _service.submitScore(score),
       _service.saveQuizHistory(
@@ -71,13 +76,15 @@ class _ResultViewState extends State<ResultView> {
       ),
     ]);
 
-    // ── Coba unlock card berikutnya ────────────────────
     bool unlocked = false;
     final meta = _quizMeta[quizId];
+
     if (meta != null) {
       final int    cardIndex  = meta['cardIndex']  as int;
       final int    totalCards = meta['totalCards'] as int;
       final String kategori   = meta['kategori']   as String;
+
+      print('[ResultView] Mencoba unlock: kategori=$kategori, cardIndex=$cardIndex, score=$score');
 
       if (kategori == 'rumah_adat') {
         unlocked = await _rumahProgress.tryUnlockNext(
@@ -92,6 +99,8 @@ class _ResultViewState extends State<ResultView> {
           totalCards:       totalCards,
         );
       }
+    } else {
+      print('[ResultView] WARNING: quizId="$quizId" tidak ada di _quizMeta');
     }
 
     if (mounted) {
@@ -118,6 +127,11 @@ class _ResultViewState extends State<ResultView> {
     final List answers   = args['userAnswers'];
     final int wrong      = total - correct;
     final int percentage = ((correct / total) * 100).round();
+
+    final String quizId    = (args['quizId']    as String? ?? '').trim();
+    final String quizTitle = (args['quizTitle'] as String? ?? '').trim();
+    final String quizImage = (args['quizImage'] as String? ?? '').trim();
+    final String quizDesc  = (args['quizDescription'] as String? ?? '').trim();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -228,11 +242,8 @@ class _ResultViewState extends State<ResultView> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.white,
-                            size: 14,
-                          ),
+                          const Icon(Icons.check_circle,
+                              color: Colors.white, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             'Skor tersimpan',
@@ -254,26 +265,19 @@ class _ResultViewState extends State<ResultView> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                    horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F0E8),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: const Color(0xFFD4A045),
-                    width: 1.5,
-                  ),
+                      color: const Color(0xFFD4A045), width: 1.5),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(
-                      Icons.lock_open,
-                      color: Color(0xFFD4A045),
-                      size: 22,
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
+                    Icon(Icons.lock_open,
+                        color: Color(0xFFD4A045), size: 22),
+                    SizedBox(width: 10),
+                    Expanded(
                       child: Text(
                         'Quiz berikutnya telah terbuka!',
                         style: TextStyle(
@@ -294,9 +298,7 @@ class _ResultViewState extends State<ResultView> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                    horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF3E0),
                   borderRadius: BorderRadius.circular(10),
@@ -307,11 +309,8 @@ class _ResultViewState extends State<ResultView> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Color(0xFFFF9800),
-                      size: 22,
-                    ),
+                    const Icon(Icons.info_outline,
+                        color: Color(0xFFFF9800), size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -332,9 +331,11 @@ class _ResultViewState extends State<ResultView> {
             // ── Benar & Salah ────────────────────────
             Row(
               children: [
-                Expanded(child: _StatCard(label: 'Benar', value: '$correct')),
+                Expanded(
+                    child: _StatCard(label: 'Benar', value: '$correct')),
                 const SizedBox(width: 16),
-                Expanded(child: _StatCard(label: 'Salah',  value: '$wrong')),
+                Expanded(
+                    child: _StatCard(label: 'Salah', value: '$wrong')),
               ],
             ),
             const SizedBox(height: 40),
@@ -344,8 +345,23 @@ class _ResultViewState extends State<ResultView> {
               label: 'Main Lagi',
               color: const Color(0xFF5D3A1A),
               onTap: () {
-                Get.find<QuizController>().resetQuiz();
-                Get.offNamed(Routes.DETAIL);
+                final meta     = _quizMeta[quizId];
+                final kategori = meta?['kategori'] as String? ?? '';
+                if (kategori == 'tarian_adat') {
+                  Get.offNamed(Routes.DETAIL_TARI, arguments: {
+                    'quizId':    quizId,
+                    'quizTitle': quizTitle,
+                    'quizImage': quizImage,
+                    'quizDesc':  quizDesc,
+                  });
+                } else {
+                  Get.offNamed(Routes.DETAIL, arguments: {
+                    'quizId':    quizId,
+                    'quizTitle': quizTitle,
+                    'quizImage': quizImage,
+                    'quizDesc':  quizDesc,
+                  });
+                }
               },
             ),
             const SizedBox(height: 12),
@@ -428,6 +444,7 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final Color  color;
   final VoidCallback onTap;
+
   const _ActionButton({
     required this.label,
     required this.color,

@@ -1,41 +1,104 @@
+// lib/app/modules/detail/views/detail_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../controllers/detail_controller.dart';
+import '../../favorite/controllers/favorite_controller.dart';
 import '../../../routes/app_pages.dart';
 
-class DetailView extends StatelessWidget {
+class DetailView extends StatefulWidget {
   const DetailView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final DetailController controller = Get.find<DetailController>();
+  State<DetailView> createState() => _DetailViewState();
+}
 
-    final args           = Get.arguments as Map<String, dynamic>?;
-    final String quizId    = args?['quizId']    ?? 'rumah_joglo';
-    final String quizTitle = args?['quizTitle'] ?? 'Rumah Joglo';
-    final String quizDesc  = args?['quizDesc']  ??
+class _DetailViewState extends State<DetailView> {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  String _longDescription = '';
+  bool   _isLoadingDesc   = true;
+
+  late final String quizId;
+  late final String quizTitle;
+  late final String quizImage;
+  late final String quizDesc;
+
+  // FIX: simpan controller sebagai field, bukan ambil di build()
+  late final DetailController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final args = Get.arguments as Map<String, dynamic>?;
+    quizId    = args?['quizId']    ?? 'rumah_joglo';
+    quizTitle = args?['quizTitle'] ?? 'Rumah Joglo';
+    quizImage = args?['quizImage'] ?? 'assets/images/rumahjoglo.png';
+    quizDesc  = args?['quizDesc']  ??
         'Rumah Joglo adalah rumah adat khas masyarakat Jawa yang identik '
         'dengan bentuk atap bertingkat dan keberadaan saka guru (empat tiang '
-        'utama) sebagai penopang bangunan. Rumah ini melambangkan status sosial, '
-        'kewibawaan, dan nilai filosofi kehidupan masyarakat Jawa.\n\n'
-        'Struktur Rumah Joglo umumnya terdiri dari beberapa bagian, seperti '
-        'pendopo (ruang terbuka untuk menerima tamu), pringgitan, dan dalem '
-        'sebagai ruang utama keluarga.\n\n'
-        'Material bangunan Rumah Joglo biasanya terbuat dari kayu jati dengan '
-        'ukiran khas Jawa yang sarat makna simbolis.';
-    final String quizImage = args?['quizImage'] ?? 'assets/images/rumahjoglo.png';
+        'utama) sebagai penopang bangunan.';
 
-    controller.setQuiz({
+    // FIX: pastikan DetailController tersedia, buat jika belum ada
+    if (!Get.isRegistered<DetailController>()) {
+      // Pastikan FavoriteController juga tersedia sebagai dependency
+      if (!Get.isRegistered<FavoriteController>()) {
+        Get.put<FavoriteController>(FavoriteController(), permanent: true);
+      }
+      Get.put<DetailController>(DetailController());
+    }
+    _controller = Get.find<DetailController>();
+
+    // setQuiz cukup dipanggil sekali di initState, bukan di setiap build()
+    _controller.setQuiz({
       'id':          quizId,
       'title':       quizTitle,
       'description': quizDesc,
       'image':       quizImage,
     });
 
+    _fetchLongDescription();
+  }
+
+  Future<void> _fetchLongDescription() async {
+    if (quizId.isEmpty) {
+      setState(() {
+        _longDescription = quizDesc;
+        _isLoadingDesc   = false;
+      });
+      return;
+    }
+
+    try {
+      final doc  = await _db.collection('quizzes').doc(quizId).get();
+      final data = doc.data();
+      final long = data?['LongDescription'] as String?
+          ?? data?['longDescription'] as String?;
+
+      setState(() {
+        _longDescription = (long != null && long.trim().isNotEmpty)
+            ? long.trim()
+            : quizDesc;
+        _isLoadingDesc   = false;
+      });
+    } catch (e) {
+      print('Error fetchLongDescription (detail): $e');
+      setState(() {
+        _longDescription = quizDesc;
+        _isLoadingDesc   = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
+          // ── Header gambar ──────────────────────────
           Stack(
             children: [
               SizedBox(
@@ -73,7 +136,10 @@ class DetailView extends StatelessWidget {
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_back, color: Color(0xFF583410)),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF583410),
+                      ),
                     ),
                   ),
                 ),
@@ -81,13 +147,17 @@ class DetailView extends StatelessWidget {
             ],
           ),
 
+          // ── Konten ────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+                padding: const EdgeInsets.only(
+                  left: 24, right: 24, bottom: 24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ── Judul + bookmark ──────────────
                     Row(
                       children: [
                         Expanded(
@@ -100,45 +170,88 @@ class DetailView extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
                         Obx(() => GestureDetector(
-                          onTap: controller.toggleFavorite,
-                          child: Row(
-                            children: [
-                              Icon(
-                                controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                                color: const Color.fromARGB(255, 255, 255, 255), size: 20,
-                              ),
-                            ],
+                          onTap: _controller.toggleFavorite,
+                          child: Icon(
+                            _controller.isFavorite.value
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            color: Colors.white,
+                            size: 20,
                           ),
                         )),
                       ],
                     ),
 
                     const SizedBox(height: 15),
-                    const Text('Deskripsi', style: TextStyle(color: Color(0xFF583410), fontSize: 20, fontWeight: FontWeight.bold)),
+
+                    // ── Label Deskripsi ───────────────
+                    const Text(
+                      'Deskripsi',
+                      style: TextStyle(
+                        color: Color(0xFF583410),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(quizDesc, style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.8), fontSize: 15), textAlign: TextAlign.justify),
+
+                    // ── Isi deskripsi / loading ───────
+                    _isLoadingDesc
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF583410),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            _longDescription,
+                            style: TextStyle(
+                              color: const Color(0xFF583410)
+                                  .withValues(alpha: 0.8),
+                              fontSize: 15,
+                              height: 1.6,
+                            ),
+                            textAlign: TextAlign.justify,
+                          ),
+
                     const SizedBox(height: 32),
 
+                    // ── Tombol aksi bawah ─────────────
                     Row(
                       children: [
                         GestureDetector(
                           onTap: () => Get.toNamed(Routes.LEADERBOARD),
                           child: Container(
                             width: 56, height: 56,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                            child: const Icon(Icons.share_outlined, color: Color(0xFF583410), size: 35),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.share_outlined,
+                              color: Color(0xFF583410),
+                              size: 35,
+                            ),
                           ),
                         ),
                         Obx(() => GestureDetector(
-                          onTap: controller.toggleFavorite,
+                          onTap: _controller.toggleFavorite,
                           child: Container(
                             width: 56, height: 56,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Icon(
-                              controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                              color: const Color(0xFFD4A045), size: 40,
+                              _controller.isFavorite.value
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: const Color(0xFFD4A045),
+                              size: 40,
                             ),
                           ),
                         )),
@@ -152,17 +265,25 @@ class DetailView extends StatelessWidget {
                                 arguments: {
                                   'quizId':          quizId,
                                   'quizTitle':       quizTitle,
-                                  'quizImage':       quizImage,       // ← untuk history
-                                  'quizDescription': quizDesc,        // ← untuk history
+                                  'quizImage':       quizImage,
+                                  'quizDescription': quizDesc,
                                 },
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF583410),
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                                 elevation: 0,
                               ),
-                              child: const Text('Mainkan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'Mainkan',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ),

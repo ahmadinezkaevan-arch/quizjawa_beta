@@ -12,7 +12,8 @@ class RumahAdatView extends StatefulWidget {
   State<RumahAdatView> createState() => _RumahAdatViewState();
 }
 
-class _RumahAdatViewState extends State<RumahAdatView> {
+class _RumahAdatViewState extends State<RumahAdatView>
+    with RouteAware {
   final RumahAdatProgressService _progressService = RumahAdatProgressService();
 
   final List<Map<String, String>> rumahList = [
@@ -48,8 +49,8 @@ class _RumahAdatViewState extends State<RumahAdatView> {
     },
   ];
 
-  int _unlockedCount = 1;
-  bool _isLoading    = true;
+  int  _unlockedCount = 1;
+  bool _isLoading     = true;
 
   @override
   void initState() {
@@ -57,16 +58,26 @@ class _RumahAdatViewState extends State<RumahAdatView> {
     _loadProgress();
   }
 
-  // Reload progress setiap kali halaman muncul kembali
-  // (misalnya setelah user selesai quiz lalu back ke halaman ini)
+  // FIX: gunakan didChangeDependencies hanya sekali saat halaman benar-benar
+  // kembali dari stack navigasi, bukan setiap build ulang.
+  // Supaya tidak double-call dengan initState, gunakan flag _initialized.
+  bool _initialized = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      return; // skip — sudah dipanggil di initState
+    }
+    // Dipanggil saat halaman muncul kembali (pop dari detail/quiz)
     _loadProgress();
   }
 
   Future<void> _loadProgress() async {
+    // Jangan set isLoading=true lagi saat reload agar list tidak berkedip
     final count = await _progressService.getUnlockedCount();
+    print('[RumahAdatView] unlockedCount=$count');
     if (mounted) {
       setState(() {
         _unlockedCount = count;
@@ -104,31 +115,41 @@ class _RumahAdatViewState extends State<RumahAdatView> {
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF583410)),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: rumahList.length,
-              itemBuilder: (context, index) {
-                final item       = rumahList[index];
-                final isUnlocked = index < _unlockedCount;
+          : RefreshIndicator(
+              // Tarik ke bawah untuk reload progress secara manual
+              color: const Color(0xFF583410),
+              onRefresh: _loadProgress,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: rumahList.length,
+                itemBuilder: (context, index) {
+                  final item       = rumahList[index];
+                  final isUnlocked = index < _unlockedCount;
 
-                return _RumahAdatItem(
-                  title:       item['title']!,
-                  description: item['description']!,
-                  image:       item['image']!,
-                  isUnlocked:  isUnlocked,
-                  onTap: isUnlocked
-                      ? () => Get.toNamed(
-                            Routes.DETAIL,
-                            arguments: {
-                              'quizId': item['id'],
-                              'quizTitle': item['title'],
-                              'quizImage': item['image'],
-                              'quizDesc': item['description'],
-                            },
-                          )
-                      : null,
-                );
-              },
+                  return _RumahAdatItem(
+                    title:       item['title']!,
+                    description: item['description']!,
+                    image:       item['image']!,
+                    isUnlocked:  isUnlocked,
+                    onTap: isUnlocked
+                        ? () async {
+                            // FIX: gunakan await + reload setelah kembali dari detail
+                            await Get.toNamed(
+                              Routes.DETAIL,
+                              arguments: {
+                                'quizId':    item['id'],
+                                'quizTitle': item['title'],
+                                'quizImage': item['image'],
+                                'quizDesc':  item['description'],
+                              },
+                            );
+                            // Setelah kembali dari detail/quiz, reload progress
+                            _loadProgress();
+                          }
+                        : null,
+                  );
+                },
+              ),
             ),
     );
   }

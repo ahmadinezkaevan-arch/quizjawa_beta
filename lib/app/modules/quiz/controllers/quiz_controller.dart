@@ -7,9 +7,9 @@ class QuizController extends GetxController {
   final FirestoreService _service = FirestoreService();
 
   final RxList<QuestionModel> questions = <QuestionModel>[].obs;
-  final RxBool   isLoading     = true.obs;
-  final RxString errorMessage  = ''.obs;
-  final RxString quizTitle     = ''.obs;
+  final RxBool   isLoading    = true.obs;
+  final RxString errorMessage = ''.obs;
+  final RxString quizTitle    = ''.obs;
 
   final currentIndex   = 0.obs;
   final correctAnswers = 0.obs;
@@ -18,18 +18,30 @@ class QuizController extends GetxController {
   late List<String?> userAnswers;
   late String quizId;
 
-  // Simpan info quiz untuk dikirim ke ResultView & history
   String _quizImage       = '';
   String _quizDescription = '';
 
   @override
   void onInit() {
     super.onInit();
-    final args           = Get.arguments as Map<String, dynamic>?;
-    quizId               = args?['quizId']          ?? '';
-    quizTitle.value      = args?['quizTitle']        ?? 'Quiz';
-    _quizImage           = args?['quizImage']        ?? '';
-    _quizDescription     = args?['quizDescription']  ?? '';
+
+    final args = Get.arguments as Map<String, dynamic>?;
+
+    quizId               = (args?['quizId'] as String? ?? '').trim();
+    quizTitle.value      = (args?['quizTitle'] as String? ?? 'Quiz').trim();
+    _quizImage           = (args?['quizImage'] as String? ?? '').trim();
+    _quizDescription     = (args?['quizDescription'] as String? ?? '').trim();
+
+    print('[QuizController] onInit: quizId="$quizId"');
+    print('[QuizController] onInit: quizTitle="${quizTitle.value}"');
+
+    if (quizId.isEmpty) {
+      print('[QuizController] WARNING: quizId kosong!');
+      errorMessage.value = 'Quiz tidak ditemukan. Kembali dan coba lagi.';
+      isLoading.value    = false;
+      return;
+    }
+
     fetchQuestions();
   }
 
@@ -41,6 +53,7 @@ class QuizController extends GetxController {
       questions.assignAll(result);
       userAnswers = List.filled(questions.length, null);
     } catch (e) {
+      print('[QuizController] Error fetchQuestions: $e');
       errorMessage.value = 'Gagal memuat soal. Coba lagi.';
     } finally {
       isLoading.value = false;
@@ -69,6 +82,9 @@ class QuizController extends GetxController {
       currentIndex.value++;
       selectedAnswer.value = null;
     } else {
+      // FIX: sertakan quizId & quizTitle langsung di arguments result
+      // agar ResultView tidak perlu membaca dari controller yang mungkin
+      // sudah di-recreate saat binding RESULT dijalankan
       Get.offNamed(
         Routes.RESULT,
         arguments: {
@@ -76,7 +92,8 @@ class QuizController extends GetxController {
           'totalQuestions':  totalQuestions,
           'questions':       questions.toList(),
           'userAnswers':     userAnswers,
-          // Info quiz untuk history
+          'quizId':          quizId,           // ← FIX: tambahkan ini
+          'quizTitle':       quizTitle.value,  // ← FIX: tambahkan ini
           'quizImage':       _quizImage,
           'quizDescription': _quizDescription,
         },
