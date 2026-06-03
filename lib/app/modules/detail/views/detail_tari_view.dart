@@ -1,31 +1,76 @@
+// lib/app/modules/detail/views/detail_tari_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../controllers/detail_controller.dart';
 import '../../../routes/app_pages.dart';
 
-class DetailTariView extends StatelessWidget {
+class DetailTariView extends StatefulWidget {
   const DetailTariView({super.key});
+
+  @override
+  State<DetailTariView> createState() => _DetailTariViewState();
+}
+
+class _DetailTariViewState extends State<DetailTariView> {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  String _longDescription = '';
+  bool   _isLoadingDesc   = true;
+
+  // Ambil dari arguments
+  late final String quizId;
+  late final String quizTitle;
+  late final String quizImage;
+  late final String quizDesc; // deskripsi pendek (dari list)
+
+  @override
+  void initState() {
+    super.initState();
+    final args  = Get.arguments as Map<String, dynamic>?;
+    quizId      = args?['quizId']    ?? '';
+    quizTitle   = args?['quizTitle'] ?? '';
+    quizImage   = args?['quizImage'] ?? '';
+    quizDesc    = args?['quizDesc']  ?? '';
+
+    _fetchLongDescription();
+  }
+
+  Future<void> _fetchLongDescription() async {
+    if (quizId.isEmpty) {
+      setState(() {
+        _longDescription = quizDesc; // fallback ke deskripsi pendek
+        _isLoadingDesc   = false;
+      });
+      return;
+    }
+
+    try {
+      final doc = await _db.collection('quizzes').doc(quizId).get();
+      final data = doc.data();
+      final long = data?['longDescription'] as String?;
+
+      setState(() {
+        // Jika longDescription ada di Firestore, pakai itu
+        // Jika tidak, fallback ke deskripsi pendek dari arguments
+        _longDescription = (long != null && long.trim().isNotEmpty)
+            ? long.trim()
+            : quizDesc;
+        _isLoadingDesc   = false;
+      });
+    } catch (e) {
+      print('Error fetchLongDescription: $e');
+      setState(() {
+        _longDescription = quizDesc;
+        _isLoadingDesc   = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final DetailController controller = Get.find<DetailController>();
-
-    final args           = Get.arguments as Map<String, dynamic>?;
-    final String quizId    = args?['quizId']    ?? 'tarian_adat';
-    final String quizTitle = args?['quizTitle'] ?? 'Tari Topeng Cirebon';
-    final String quizDesc  = args?['quizDesc']  ??
-        'Tari Topeng Cirebon adalah salah satu tari tradisional khas Cirebon, Jawa Barat '
-        'Tarian ini dikenal karena penarinya menggunakan topeng saat menari. '
-        ' Setiap topeng memiliki warna dan bentuk berbeda yang melambangkan karakter tertentu, seperti lembut, tegas, hingga gagah berani.\n\n'
-        'Tari Topeng Cirebon berkembang sejak masa penyebaran Islam di tanah Jawa.'
-        'Selain sebagai hiburan, tarian ini juga dipakai dalam acara adat dan pertunjukan budaya. '
-        'Gerakan tariannya memadukan unsur halus dan tegas sehingga terlihat unik dan penuh makna.\n\n'
-        'Dalam pertunjukannya, Tari Topeng Cirebon memiliki beberapa jenis topeng terkenal, seperti Panji, Samba, Rumyang, Tumenggung, dan Kelanang Cirebon biasanya diiringi gamelan khas Cirebon. '
-        'Ada beberapa jenis topeng terkenal, seperti Panji, Samba, Rumyang, Tumenggung, dan Kelana. '
-        'Masing-masing menggambarkan sifat manusia yang berbeda.\n\n'
-        'Tari ini menjadi salah satu warisan budaya Indonesia yang masih dijaga sampai sekarang. '
-        'Selain sebagai seni pertunjukan, Tari Topeng Cirebon juga mengajarkan nilai kehidupan seperti kesabaran, keberanian, dan pengendalian diri.';
-    final String quizImage = args?['quizImage'] ?? 'assets/images/tari_topeng_cirebon.png';
 
     controller.setQuiz({
       'id':          quizId,
@@ -38,6 +83,7 @@ class DetailTariView extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
+          // ── Header gambar ──────────────────────────
           Stack(
             children: [
               SizedBox(
@@ -46,7 +92,8 @@ class DetailTariView extends StatelessWidget {
                 child: Image.asset(
                   quizImage,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF583410)),
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(color: const Color(0xFF583410)),
                 ),
               ),
               Positioned(
@@ -69,8 +116,14 @@ class DetailTariView extends StatelessWidget {
                     onTap: () => Get.back(),
                     child: Container(
                       width: 40, height: 40,
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: const Icon(Icons.arrow_back, color: Color(0xFF583410)),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF583410),
+                      ),
                     ),
                   ),
                 ),
@@ -78,23 +131,45 @@ class DetailTariView extends StatelessWidget {
             ],
           ),
 
+          // ── Konten ────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+                padding: const EdgeInsets.only(
+                  left: 24, right: 24, bottom: 24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ── Judul + stats + bookmark ──────
                     Row(
                       children: [
                         Expanded(
-                          child: Text(quizTitle, style: const TextStyle(color: Color(0xFF583410), fontSize: 28, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            quizTitle,
+                            style: const TextStyle(
+                              color: Color(0xFF583410),
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         Row(
                           children: [
-                            const Icon(Icons.play_circle_outline, color: Color(0xFF583410), size: 20),
+                            const Icon(
+                              Icons.play_circle_outline,
+                              color: Color(0xFF583410),
+                              size: 20,
+                            ),
                             const SizedBox(width: 4),
-                            Text('123', style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.7), fontSize: 16)),
+                            Text(
+                              '123',
+                              style: TextStyle(
+                                color: const Color(0xFF583410)
+                                    .withValues(alpha: 0.7),
+                                fontSize: 16,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(width: 16),
@@ -103,11 +178,21 @@ class DetailTariView extends StatelessWidget {
                           child: Row(
                             children: [
                               Icon(
-                                controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                                color: Colors.yellow, size: 20,
+                                controller.isFavorite.value
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                color: Colors.yellow,
+                                size: 20,
                               ),
                               const SizedBox(width: 4),
-                              Text('789', style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.7), fontSize: 16)),
+                              Text(
+                                '789',
+                                style: TextStyle(
+                                  color: const Color(0xFF583410)
+                                      .withValues(alpha: 0.7),
+                                  fontSize: 16,
+                                ),
+                              ),
                             ],
                           ),
                         )),
@@ -115,29 +200,74 @@ class DetailTariView extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 15),
-                    const Text('Deskripsi', style: TextStyle(color: Color(0xFF583410), fontSize: 20, fontWeight: FontWeight.bold)),
+
+                    // ── Label Deskripsi ───────────────
+                    const Text(
+                      'Deskripsi',
+                      style: TextStyle(
+                        color: Color(0xFF583410),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(quizDesc, style: TextStyle(color: const Color(0xFF583410).withValues(alpha: 0.8), fontSize: 15), textAlign: TextAlign.justify),
+
+                    // ── Isi deskripsi / loading ───────
+                    _isLoadingDesc
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF583410),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            _longDescription,
+                            style: TextStyle(
+                              color: const Color(0xFF583410)
+                                  .withValues(alpha: 0.8),
+                              fontSize: 15,
+                              height: 1.6,
+                            ),
+                            textAlign: TextAlign.justify,
+                          ),
+
                     const SizedBox(height: 32),
 
+                    // ── Tombol aksi bawah ─────────────
                     Row(
                       children: [
                         GestureDetector(
                           onTap: () => Get.toNamed(Routes.LEADERBOARD),
                           child: Container(
                             width: 56, height: 56,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                            child: const Icon(Icons.share_outlined, color: Color(0xFF583410), size: 35),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.share_outlined,
+                              color: Color(0xFF583410),
+                              size: 35,
+                            ),
                           ),
                         ),
                         Obx(() => GestureDetector(
                           onTap: controller.toggleFavorite,
                           child: Container(
                             width: 56, height: 56,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Icon(
-                              controller.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                              color: Colors.yellow, size: 40,
+                              controller.isFavorite.value
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: Colors.yellow,
+                              size: 40,
                             ),
                           ),
                         )),
@@ -151,17 +281,25 @@ class DetailTariView extends StatelessWidget {
                                 arguments: {
                                   'quizId':          quizId,
                                   'quizTitle':       quizTitle,
-                                  'quizImage':       quizImage,       // ← untuk history
-                                  'quizDescription': quizDesc,        // ← untuk history
+                                  'quizImage':       quizImage,
+                                  'quizDescription': quizDesc,
                                 },
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF583410),
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                                 elevation: 0,
                               ),
-                              child: const Text('Mainkan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'Mainkan',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ),

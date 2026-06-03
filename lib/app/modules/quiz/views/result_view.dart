@@ -1,8 +1,12 @@
+// lib/app/modules/quiz/views/result_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/quiz_controller.dart';
 import '../../main/controllers/main_controller.dart';
 import '../../../data/services/firestore_service.dart';
+import '../../../data/services/rumah_adat_progress_service.dart';
+import '../../../data/services/tarian_adat_progress_service.dart';
 import '../../../routes/app_pages.dart';
 
 class ResultView extends StatefulWidget {
@@ -13,8 +17,29 @@ class ResultView extends StatefulWidget {
 }
 
 class _ResultViewState extends State<ResultView> {
-  final FirestoreService _service = FirestoreService();
+  final FirestoreService           _service          = FirestoreService();
+  final RumahAdatProgressService   _rumahProgress    = RumahAdatProgressService();
+  final TarianAdatProgressService  _tarianProgress   = TarianAdatProgressService();
+
   bool _submitted = false;
+  bool _newUnlock = false;
+
+  // ── Mapping quizId → { cardIndex, totalCards, kategori } ──
+  // Tambahkan entry baru di sini saat quiz baru ditambahkan ke Firestore
+  static const Map<String, Map<String, dynamic>> _quizMeta = {
+    // Rumah Adat
+    'rumah_joglo':   {'cardIndex': 0, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_limasan': {'cardIndex': 1, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_tajug':   {'cardIndex': 2, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_baduy':   {'cardIndex': 3, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    'rumah_kebaya':  {'cardIndex': 4, 'totalCards': 5, 'kategori': 'rumah_adat'},
+    // Tarian Adat
+    'tarian_adat':    {'cardIndex': 0, 'totalCards': 5, 'kategori': 'tarian_adat'},
+    'tarian_saman':   {'cardIndex': 1, 'totalCards': 5, 'kategori': 'tarian_adat'},
+    'tarian_kecak':   {'cardIndex': 2, 'totalCards': 5, 'kategori': 'tarian_adat'},
+    'tarian_pendet':  {'cardIndex': 3, 'totalCards': 5, 'kategori': 'tarian_adat'},
+    'tarian_bedhaya': {'cardIndex': 4, 'totalCards': 5, 'kategori': 'tarian_adat'},
+  };
 
   @override
   void initState() {
@@ -23,33 +48,60 @@ class _ResultViewState extends State<ResultView> {
   }
 
   Future<void> _submitAll() async {
-    final args        = Get.arguments as Map<String, dynamic>;
+    final args      = Get.arguments as Map<String, dynamic>;
     final int correct = args['correctAnswers'];
     final int total   = args['totalQuestions'];
     final int score   = ((correct / total) * 100).round();
 
     final QuizController quizCtrl  = Get.find<QuizController>();
-    final String quizId            = quizCtrl.quizId;
-    final String quizTitle         = quizCtrl.quizTitle.value;
-    final String quizImage         = args['quizImage']       ?? '';
-    final String quizDescription   = args['quizDescription'] ?? '';
+    final String         quizId    = quizCtrl.quizId;
+    final String         quizTitle = quizCtrl.quizTitle.value;
+    final String         quizImage = args['quizImage']       ?? '';
+    final String         quizDesc  = args['quizDescription'] ?? '';
 
-    // Jalankan parallel: submit leaderboard + simpan history
+    // Submit leaderboard + history secara parallel
     await Future.wait([
       _service.submitScore(score),
       _service.saveQuizHistory(
         quizId:          quizId,
         quizTitle:       quizTitle,
         quizImage:       quizImage,
-        quizDescription: quizDescription,
+        quizDescription: quizDesc,
         score:           score,
       ),
     ]);
 
-    if (mounted) setState(() => _submitted = true);
+    // ── Coba unlock card berikutnya ────────────────────
+    bool unlocked = false;
+    final meta = _quizMeta[quizId];
+    if (meta != null) {
+      final int    cardIndex  = meta['cardIndex']  as int;
+      final int    totalCards = meta['totalCards'] as int;
+      final String kategori   = meta['kategori']   as String;
+
+      if (kategori == 'rumah_adat') {
+        unlocked = await _rumahProgress.tryUnlockNext(
+          currentCardIndex: cardIndex,
+          score:            score,
+          totalCards:       totalCards,
+        );
+      } else if (kategori == 'tarian_adat') {
+        unlocked = await _tarianProgress.tryUnlockNext(
+          currentCardIndex: cardIndex,
+          score:            score,
+          totalCards:       totalCards,
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _submitted = true;
+        _newUnlock = unlocked;
+      });
+    }
   }
 
-  // Diambil dari kode kamu — navigasi ke home setelah selesai
   void _goToHome() {
     if (Get.isRegistered<MainController>()) {
       Get.find<MainController>().changeTab(0);
@@ -72,7 +124,6 @@ class _ResultViewState extends State<ResultView> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
-        // Diambil dari kode kamu — tombol X untuk kembali ke home
         leading: IconButton(
           icon: const Icon(Icons.close, color: Color(0xFF583410)),
           onPressed: _goToHome,
@@ -196,6 +247,86 @@ class _ResultViewState extends State<ResultView> {
                 ],
               ),
             ),
+
+            // ── Banner unlock card baru ───────────────
+            if (_newUnlock) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F0E8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFD4A045),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.lock_open,
+                      color: Color(0xFFD4A045),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Quiz berikutnya telah terbuka!',
+                        style: TextStyle(
+                          color: Color(0xFF583410),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // ── Info jika skor kurang dari 60 ─────────
+            if (_submitted && percentage < 60) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFFF9800).withValues(alpha: 0.6),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Color(0xFFFF9800),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Raih skor 60% atau lebih untuk membuka quiz berikutnya.',
+                        style: TextStyle(
+                          color: const Color(0xFF583410).withValues(alpha: 0.8),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 24),
 
             // ── Benar & Salah ────────────────────────
