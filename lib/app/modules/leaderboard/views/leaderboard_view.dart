@@ -10,14 +10,11 @@ class LeaderboardView extends StatelessWidget {
     final LeaderboardController controller = Get.find<LeaderboardController>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F1E8),
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6B3E11)),
-          onPressed: () => Get.back(),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text(
           'Papan Peringkat',
           style: TextStyle(
@@ -49,7 +46,6 @@ class LeaderboardView extends StatelessWidget {
 
         return Column(
           children: [
-            // ── Subtitle ──────────────────────────────────
             const Text(
               'Top pengguna dengan skor tertinggi',
               style: TextStyle(
@@ -59,7 +55,6 @@ class LeaderboardView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // ── Podium ────────────────────────────────────
             if (entries.length >= 3)
               _Podium(entries: entries, myUid: myUid)
             else
@@ -67,7 +62,6 @@ class LeaderboardView extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // ── List peringkat 4+ (kartu krem individual) ─
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(26, 0, 26, 16),
@@ -97,9 +91,6 @@ class LeaderboardView extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════
-// PODIUM
-// ════════════════════════════════════════════════════
 class _Podium extends StatelessWidget {
   final List<Map<String, dynamic>> entries;
   final String myUid;
@@ -116,12 +107,10 @@ class _Podium extends StatelessWidget {
     const double gap = 6.0;
     final barW = (screenW - gap * 2) / 3;
 
-    // Tinggi podium
     const double h1 = 106.0;
     const double h2 = 74.0;
     const double h3 = 74.0;
 
-    // Avatar size
     const double av1 = 86.0;
     const double av2 = 70.0;
     const double av3 = 70.0;
@@ -130,12 +119,10 @@ class _Podium extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          // ── Avatar row ──────────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Peringkat 2 — avatar turun sesuai selisih tinggi podium
               SizedBox(
                 width: barW,
                 child: _AvatarColumn(
@@ -149,7 +136,6 @@ class _Podium extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: gap),
-              // Peringkat 1
               SizedBox(
                 width: barW,
                 child: _AvatarColumn(
@@ -164,7 +150,6 @@ class _Podium extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: gap),
-              // Peringkat 3
               SizedBox(
                 width: barW,
                 child: _AvatarColumn(
@@ -179,23 +164,19 @@ class _Podium extends StatelessWidget {
               ),
             ],
           ),
-
-          // ── Podium bars dengan gap ────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Peringkat 2 — krem
               _PodiumBar(
                 width: barW,
                 height: h2,
-                color: Color(0xFFAA7C52),
+                color: const Color(0xFFAA7C52),
                 textColor: Colors.white,
                 rank: 2,
                 isFirst: false,
               ),
               const SizedBox(width: gap),
-              // Peringkat 1 — coklat solid
               _PodiumBar(
                 width: barW,
                 height: h1,
@@ -205,11 +186,10 @@ class _Podium extends StatelessWidget {
                 isFirst: true,
               ),
               const SizedBox(width: gap),
-              // Peringkat 3 — krem
               _PodiumBar(
                 width: barW,
                 height: h3,
-                color: Color(0xFFAA7C52),
+                color: const Color(0xFFAA7C52),
                 textColor: Colors.white,
                 rank: 3,
                 isFirst: false,
@@ -222,7 +202,6 @@ class _Podium extends StatelessWidget {
   }
 }
 
-// ── Bar podium ────────────────────────────────────────
 class _PodiumBar extends StatelessWidget {
   final double width;
   final double height;
@@ -266,7 +245,6 @@ class _PodiumBar extends StatelessWidget {
   }
 }
 
-// ── Kolom avatar + nama + skor ───────────────────────
 class _AvatarColumn extends StatelessWidget {
   final String name;
   final int score;
@@ -299,15 +277,11 @@ class _AvatarColumn extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Crown untuk peringkat 1
         if (showCrown)
           const Text('👑', style: TextStyle(fontSize: 42))
         else
           const SizedBox(height: 26),
-
         const SizedBox(height: 2),
-
-        // Avatar dengan medali
         Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
@@ -339,14 +313,12 @@ class _AvatarColumn extends StatelessWidget {
                         width: size,
                         height: size,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _InitialAvatar(name: name, size: size);
-                        },
+                        errorBuilder: (context, error, stackTrace) =>
+                            _InitialAvatar(name: name, size: size),
                       )
                     : _InitialAvatar(name: name, size: size),
               ),
             ),
-            // Medali di pojok atas
             Positioned(
               top: -10,
               child: Container(
@@ -377,10 +349,7 @@ class _AvatarColumn extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: 6),
-
-        // Nama
         SizedBox(
           width: size + 16,
           child: Text(
@@ -397,8 +366,6 @@ class _AvatarColumn extends StatelessWidget {
             ),
           ),
         ),
-
-        // Skor
         Text(
           '$score',
           style: const TextStyle(
@@ -407,23 +374,17 @@ class _AvatarColumn extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-
-        // Spacer agar avatar rata dengan dasar podium tertinggi
         SizedBox(height: extraBottom),
       ],
     );
   }
 }
 
-// ── Podium kecil jika < 3 peserta ────────────────────
 class _InitialAvatar extends StatelessWidget {
   final String name;
   final double size;
 
-  const _InitialAvatar({
-    required this.name,
-    required this.size,
-  });
+  const _InitialAvatar({required this.name, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -479,7 +440,7 @@ class _PodiumSmall extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════
-// RANK CARD (peringkat 4+) — kartu krem individual
+// RANK CARD (peringkat 4+)
 // ════════════════════════════════════════════════════
 class _RankCard extends StatelessWidget {
   final int rank;
@@ -500,14 +461,19 @@ class _RankCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
         color: isMe ? const Color(0xFFFFF3E8) : Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isMe
+              ? const Color(0xFFD4A045)
+              : const Color.fromARGB(255, 241, 240, 240),
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
-          // Nomor
           SizedBox(
             width: 22,
             child: Text(
@@ -522,7 +488,6 @@ class _RankCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          // Avatar kecil
           Container(
             width: 38,
             height: 38,
@@ -543,15 +508,13 @@ class _RankCard extends StatelessWidget {
                       width: 38,
                       height: 38,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _InitialAvatar(name: name, size: 38);
-                      },
+                      errorBuilder: (context, error, stackTrace) =>
+                          _InitialAvatar(name: name, size: 38),
                     )
                   : _InitialAvatar(name: name, size: 38),
             ),
           ),
           const SizedBox(width: 12),
-          // Nama
           Expanded(
             child: Text(
               isMe ? 'Kamu' : name,
@@ -565,7 +528,6 @@ class _RankCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // Skor
           Text(
             '$score',
             style: TextStyle(

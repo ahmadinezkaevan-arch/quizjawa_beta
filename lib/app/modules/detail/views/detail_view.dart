@@ -170,16 +170,6 @@ class _DetailViewState extends State<DetailView> {
                             ),
                           ),
                         ),
-                        Obx(() => GestureDetector(
-                          onTap: _controller.toggleFavorite,
-                          child: Icon(
-                            _controller.isFavorite.value
-                                ? Icons.bookmark
-                                : Icons.bookmark_border,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        )),
                       ],
                     ),
 
@@ -223,39 +213,6 @@ class _DetailViewState extends State<DetailView> {
                     // ── Tombol aksi bawah ─────────────
                     Row(
                       children: [
-                        GestureDetector(
-                          onTap: () => Get.toNamed(Routes.LEADERBOARD),
-                          child: Container(
-                            width: 56, height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.share_outlined,
-                              color: Color(0xFF583410),
-                              size: 35,
-                            ),
-                          ),
-                        ),
-                        Obx(() => GestureDetector(
-                          onTap: _controller.toggleFavorite,
-                          child: Container(
-                            width: 56, height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              _controller.isFavorite.value
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_border,
-                              color: const Color(0xFFD4A045),
-                              size: 40,
-                            ),
-                          ),
-                        )),
-                        const SizedBox(width: 120),
                         Expanded(
                           child: SizedBox(
                             height: 56,

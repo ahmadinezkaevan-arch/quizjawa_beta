@@ -172,30 +172,6 @@ class _DetailTariViewState extends State<DetailTariView> {
                             ),
                           ],
                         ),
-                        const SizedBox(width: 16),
-                        Obx(() => GestureDetector(
-                          onTap: controller.toggleFavorite,
-                          child: Row(
-                            children: [
-                              Icon(
-                                controller.isFavorite.value
-                                    ? Icons.bookmark
-                                    : Icons.bookmark_border,
-                                color: Colors.yellow,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '789',
-                                style: TextStyle(
-                                  color: const Color(0xFF583410)
-                                      .withValues(alpha: 0.7),
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
                       ],
                     ),
 
@@ -239,39 +215,6 @@ class _DetailTariViewState extends State<DetailTariView> {
                     // ── Tombol aksi bawah ─────────────
                     Row(
                       children: [
-                        GestureDetector(
-                          onTap: () => Get.toNamed(Routes.LEADERBOARD),
-                          child: Container(
-                            width: 56, height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.share_outlined,
-                              color: Color(0xFF583410),
-                              size: 35,
-                            ),
-                          ),
-                        ),
-                        Obx(() => GestureDetector(
-                          onTap: controller.toggleFavorite,
-                          child: Container(
-                            width: 56, height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              controller.isFavorite.value
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_border,
-                              color: Colors.yellow,
-                              size: 40,
-                            ),
-                          ),
-                        )),
-                        const SizedBox(width: 120),
                         Expanded(
                           child: SizedBox(
                             height: 56,

@@ -343,7 +343,7 @@ class _ResultViewState extends State<ResultView> {
             // ── Tombol Main Lagi ─────────────────────
             _ActionButton(
               label: 'Main Lagi',
-              color: const Color(0xFF5D3A1A),
+              color: const Color(0xFF5D3A1A).withValues(alpha: 0.77),
               onTap: () {
                 final meta     = _quizMeta[quizId];
                 final kategori = meta?['kategori'] as String? ?? '';
@@ -383,7 +383,7 @@ class _ResultViewState extends State<ResultView> {
             // ── Tombol Leaderboard ───────────────────
             _ActionButton(
               label: 'Lihat Papan Peringkat',
-              color: const Color(0xFF5D3A1A).withValues(alpha: 0.5),
+              color: const Color(0xFF5D3A1A).withValues(alpha: 0.77),
               onTap: () => Get.toNamed(Routes.LEADERBOARD),
             ),
 

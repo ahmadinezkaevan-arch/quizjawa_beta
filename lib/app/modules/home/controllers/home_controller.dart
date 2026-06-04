@@ -1,15 +1,17 @@
-
 import 'package:get/get.dart';
 import '../../../data/models/quiz_model.dart';
 import '../../../data/services/firestore_service.dart';
 
 class HomeController extends GetxController {
   final FirestoreService _service = FirestoreService();
+
   static const Set<String> _homeQuizKeys = {
     'rumah joglo',
     'rumah_joglo',
     'tarian adat',
     'tarian_adat',
+    'pakaian adat',
+    'pakaian_adat',
   };
 
   // State observable

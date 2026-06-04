@@ -15,9 +15,9 @@ class ProfileController extends GetxController {
   final isPasswordHidden      = true.obs;
   final RxString username     = ''.obs;
   final RxString email        = ''.obs;
-  final RxString photoUrl     = ''.obs;   // ← BARU: URL foto profil dari Firestore
+  final RxString photoUrl     = ''.obs;
   final RxBool   isLoadingProfile   = true.obs;
-  final RxBool   isUploadingPhoto   = false.obs;  // ← BARU: loading saat upload
+  final RxBool   isUploadingPhoto   = false.obs;
 
   // Stats
   final RxInt totalQuizzes  = 0.obs;
@@ -48,7 +48,7 @@ class ProfileController extends GetxController {
 
       final data              = await _service.getUserProfile();
       username.value          = data?['username'] ?? '';
-      photoUrl.value          = data?['photoUrl']  ?? '';   // ← BARU
+      photoUrl.value          = data?['photoUrl']  ?? '';
       usernameController.text = username.value;
     } catch (e) {
       print('Error loadProfile: $e');
@@ -80,9 +80,139 @@ class ProfileController extends GetxController {
     }
   }
 
-  // ── BARU: Pilih & upload foto profil ──────────────
+  // ── BARU: Tampilkan dialog konfirmasi & hapus history ──
+  void showDeleteHistoryDialog(String docId, String quizTitle) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_outline, color: Color(0xFFC62828), size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Hapus Histori',
+              style: TextStyle(
+                color: Color(0xFF583410),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(
+              color: Color(0xFF583410),
+              fontSize: 14,
+              height: 1.5,
+            ),
+            children: [
+              const TextSpan(text: 'Hapus histori quiz '),
+              TextSpan(
+                text: '"$quizTitle"',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: '?\n\nData ini tidak dapat dikembalikan.'),
+            ],
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          // Tombol Batal
+          OutlinedButton(
+            onPressed: () => Get.back(),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF583410)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: Color(0xFF583410)),
+            ),
+          ),
+          // Tombol Hapus
+          ElevatedButton(
+            onPressed: () async {
+              Get.back(); // tutup dialog dulu
+              await _deleteHistory(docId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  // ── Eksekusi hapus dari Firestore & update list lokal ──
+  Future<void> _deleteHistory(String docId) async {
+    try {
+      await _service.deleteQuizHistory(docId);
+
+      // Hapus dari list lokal tanpa perlu reload seluruh halaman
+      historyList.removeWhere((item) => item['docId'] == docId);
+
+      // Hitung ulang stats dari data lokal yang tersisa
+      _recalculateStats();
+
+      Get.snackbar(
+        'Berhasil',
+        'Histori quiz berhasil dihapus',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF583410),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(12),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      print('Error _deleteHistory: $e');
+      Get.snackbar(
+        'Gagal',
+        'Gagal menghapus histori. Coba lagi.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 8,
+      );
+    }
+  }
+
+  // ── Hitung ulang stats dari historyList lokal ─────────
+  void _recalculateStats() {
+    final total = historyList.length;
+    totalQuizzes.value = total;
+
+    if (total == 0) {
+      averageScore.value = 0;
+      return;
+    }
+
+    final scores = historyList
+        .map((item) => (item['score'] as num?)?.toInt() ?? 0)
+        .toList();
+    averageScore.value = (scores.reduce((a, b) => a + b) / total).round();
+  }
+
+  // ── Pilih & upload foto profil ──────────────────────
   Future<void> pickAndUploadPhoto() async {
-    // Tampilkan dialog pilihan sumber foto
     final source = await _showImageSourceDialog();
     if (source == null) return;
 

@@ -198,6 +198,7 @@ class EditProfileView extends StatelessWidget {
                 onPressed: controller.showLogoutDialog,
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
+                  
                 ),
                 child: const Text(
                   'Keluar dari Akun',

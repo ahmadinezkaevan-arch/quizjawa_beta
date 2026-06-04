@@ -47,7 +47,7 @@ class LandingView extends StatelessWidget {
                 'Selamat Datang!',
                 style: TextStyle(
                   color: Color(0xFF583410),
-                  fontSize: 24,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                 ),
               ),

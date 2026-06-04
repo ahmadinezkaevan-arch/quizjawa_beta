@@ -58,9 +58,6 @@ class _RumahAdatViewState extends State<RumahAdatView>
     _loadProgress();
   }
 
-  // FIX: gunakan didChangeDependencies hanya sekali saat halaman benar-benar
-  // kembali dari stack navigasi, bukan setiap build ulang.
-  // Supaya tidak double-call dengan initState, gunakan flag _initialized.
   bool _initialized = false;
 
   @override
@@ -68,14 +65,13 @@ class _RumahAdatViewState extends State<RumahAdatView>
     super.didChangeDependencies();
     if (!_initialized) {
       _initialized = true;
-      return; // skip — sudah dipanggil di initState
+      return;
     }
     // Dipanggil saat halaman muncul kembali (pop dari detail/quiz)
     _loadProgress();
   }
 
   Future<void> _loadProgress() async {
-    // Jangan set isLoading=true lagi saat reload agar list tidak berkedip
     final count = await _progressService.getUnlockedCount();
     print('[RumahAdatView] unlockedCount=$count');
     if (mounted) {
@@ -104,12 +100,6 @@ class _RumahAdatViewState extends State<RumahAdatView>
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Color(0xFF583410)),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(

@@ -278,6 +278,7 @@ class FirestoreService {
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return {
+          'docId':           doc.id,           // ← BARU: simpan document ID untuk keperluan delete
           'quizId':          data['quizId']          ?? '',
           'quizTitle':       data['quizTitle']        ?? '',
           'quizImage':       data['quizImage']        ?? '',
@@ -288,6 +289,23 @@ class FirestoreService {
     } catch (e) {
       print('Error getQuizHistory: $e');
       return [];
+    }
+  }
+
+  // ── BARU: Hapus satu item history berdasarkan document ID ──
+  Future<void> deleteQuizHistory(String docId) async {
+    if (_uid == null) return;
+    try {
+      await _db
+          .collection('users')
+          .doc(_uid)
+          .collection('history')
+          .doc(docId)
+          .delete();
+      print('History $docId berhasil dihapus');
+    } catch (e) {
+      print('Error deleteQuizHistory: $e');
+      rethrow;
     }
   }
 

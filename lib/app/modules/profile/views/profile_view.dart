@@ -86,7 +86,7 @@ class ProfileView extends StatelessWidget {
                     );
                   }),
 
-                  // Tombol edit
+                  // Tombol edit foto
                   GestureDetector(
                     onTap: () => Get.toNamed(Routes.EDIT_PROFILE),
                     child: Container(
@@ -216,10 +216,16 @@ class ProfileView extends StatelessWidget {
                       .map((item) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _HistoryCard(
+                              docId:       item['docId']           ?? '',
                               title:       item['quizTitle']       ?? '',
                               description: item['quizDescription'] ?? '',
                               image:       item['quizImage']       ?? '',
                               score:       item['score']           ?? 0,
+                              onDelete: () =>
+                                  controller.showDeleteHistoryDialog(
+                                item['docId'] ?? '',
+                                item['quizTitle'] ?? '',
+                              ),
                             ),
                           ))
                       .toList(),
@@ -276,16 +282,20 @@ class _StatCard extends StatelessWidget {
 
 // ── Widget History Card ────────────────────────────────
 class _HistoryCard extends StatelessWidget {
+  final String docId;
   final String title;
   final String description;
   final String image;
   final int    score;
+  final VoidCallback onDelete;
 
   const _HistoryCard({
+    required this.docId,
     required this.title,
     required this.description,
     required this.image,
     required this.score,
+    required this.onDelete,
   });
 
   @override
@@ -303,9 +313,14 @@ class _HistoryCard extends StatelessWidget {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Gambar ──────────────────────────────
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: const BorderRadius.only(
+              topLeft:    Radius.circular(10),
+              bottomLeft: Radius.circular(10),
+            ),
             child: Image.asset(
               image,
               width: 100,
@@ -314,27 +329,58 @@ class _HistoryCard extends StatelessWidget {
               errorBuilder: (context, error, stackTrace) => Container(
                 width: 100,
                 height: 110,
-                color: const Color(0xFF583410),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF583410),
+                  borderRadius: BorderRadius.only(
+                    topLeft:    Radius.circular(10),
+                    bottomLeft: Radius.circular(10),
+                  ),
+                ),
                 child: const Icon(Icons.quiz, color: Colors.white, size: 40),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+
+          // ── Konten ──────────────────────────────
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF583410),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  // Baris judul + tombol hapus
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            color: Color(0xFF583410),
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      // ── Tombol Hapus ────────────
+                      GestureDetector(
+                        onTap: onDelete,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.delete_outline,
+                            color: const Color(0xFF583410).withValues(alpha: 0.5),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 4),
+
+                  // Deskripsi
                   Text(
                     description,
                     style: TextStyle(
@@ -345,7 +391,10 @@ class _HistoryCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+
                   const SizedBox(height: 8),
+
+                  // Badge skor
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -371,7 +420,8 @@ class _HistoryCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+
+          const SizedBox(width: 4),
         ],
       ),
     );

@@ -187,49 +187,91 @@ class QuizView extends StatelessWidget {
                       final int    idx    = entry.key;
                       final String option = entry.value;
                       final String prefix = String.fromCharCode(65 + idx);
-                      final bool isSelected =
-                          controller.selectedAnswer.value == option;
+
+                      final String? selected      = controller.selectedAnswer.value;
+                      final String  correctAnswer  = controller.currentQuestion.correctAnswer;
+                      final bool    hasAnswered    = selected != null;
+
+                      final bool isSelected       = selected == option;
+                      final bool isCorrectOption  = option == correctAnswer;
+                      final bool isWrongSelection = isSelected && selected != correctAnswer;
+                      final bool isRightSelection = isSelected && selected == correctAnswer;
+
+                      // ── Tentukan warna background & border ──
+                      Color bgColor     = const Color(0xFFF2EDE8);   // default
+                      Color borderColor = Colors.transparent;
+                      Color textColor   = const Color(0xFF5D3A1A);
+                      Widget? trailingIcon;
+
+                      if (hasAnswered) {
+                        if (isRightSelection) {
+                          // Pilihan benar → hijau
+                          bgColor     = const Color(0xFF4CAF50);
+                          borderColor = const Color(0xFF388E3C);
+                          textColor   = Colors.white;
+                          trailingIcon = _buildFeedbackIcon(Icons.check_circle, Colors.white);
+                        } else if (isWrongSelection) {
+                          // Pilihan salah yang dipilih → merah
+                          bgColor     = const Color(0xFFF44336);
+                          borderColor = const Color(0xFFC62828);
+                          textColor   = Colors.white;
+                          trailingIcon = _buildFeedbackIcon(Icons.cancel, Colors.white);
+                        } else if (isCorrectOption) {
+                          // Tampilkan jawaban benar → hijau (saat user salah pilih)
+                          bgColor     = const Color(0xFF4CAF50);
+                          borderColor = const Color(0xFF388E3C);
+                          textColor   = Colors.white;
+                          trailingIcon = _buildFeedbackIcon(Icons.check_circle, Colors.white);
+                        }
+                        // opsi lain tetap abu/default
+                      }
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 22),
                         child: InkWell(
-                          onTap: controller.selectedAnswer.value != null
+                          onTap: hasAnswered
                               ? null // nonaktifkan tap setelah memilih
                               : () async {
                                   controller.selectAnswer(option);
                                   await Future.delayed(
-                                    const Duration(milliseconds: 600),
+                                    const Duration(milliseconds: 800),
                                   );
                                   controller.nextQuestion();
                                 },
                           borderRadius: BorderRadius.circular(14),
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeInOut,
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 25,
                               vertical: 21,
                             ),
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFF5D3A1A)
-                                  : const Color(0xFFF2EDE8),
+                              color: bgColor,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.transparent,
+                                color: borderColor,
                                 width: 2,
                               ),
                             ),
-                            child: Text(
-                              '$prefix. $option',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: isSelected
-                                    ? Colors.white
-                                    : const Color(0xFF5D3A1A),
-                                fontWeight: FontWeight.w500,
-                              ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '$prefix. $option',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: textColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                if (trailingIcon != null) ...[
+                                  const SizedBox(width: 8),
+                                  trailingIcon,
+                                ],
+                              ],
                             ),
                           ),
                         ),
@@ -244,5 +286,9 @@ class QuizView extends StatelessWidget {
         );
       }),
     );
+  }
+
+  Widget _buildFeedbackIcon(IconData icon, Color color) {
+    return Icon(icon, color: color, size: 22);
   }
 }

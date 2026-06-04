@@ -379,6 +379,10 @@ class HomeView extends StatelessWidget {
       return Routes.TARI_ADAT;
     }
 
+    if (id == 'pakaian_adat' || title == 'pakaian adat') {
+      return Routes.BAJU_ADAT;
+    }
+
     return Routes.DETAIL;
   }
 }
