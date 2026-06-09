@@ -72,12 +72,12 @@ class ProfileView extends StatelessWidget {
                                 },
                                 errorBuilder: (context, error, stack) =>
                                     Image.asset(
-                                  'assets/images/profil.png',
+                                  'assets/images/profilekosong.png',
                                   fit: BoxFit.cover,
                                 ),
                               )
                             : Image.asset(
-                                'assets/images/profil.png',
+                                'assets/images/profilekosong.png',
                                 fit: BoxFit.cover,
                                 width: 120,
                                 height: 120,

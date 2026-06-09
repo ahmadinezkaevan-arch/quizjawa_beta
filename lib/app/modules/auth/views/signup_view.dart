@@ -138,46 +138,7 @@ class SignupView extends StatelessWidget {
 
               const SizedBox(height: 15),
 
-              // ── Divider ───────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: Divider(
-                      color: const Color(0xFF583410).withValues(alpha: 0.25),
-                      thickness: 1,
-                      endIndent: 12,
-                    ),
-                  ),
-                  Text(
-                    'atau daftar dengan',
-                    style: TextStyle(
-                      color: const Color(0xFF583410).withValues(alpha: 0.6),
-                      fontSize: 13,
-                    ),
-                  ),
-                  Expanded(
-                    child: Divider(
-                      color: const Color(0xFF583410).withValues(alpha: 0.25),
-                      thickness: 1,
-                      indent: 12,
-                    ),
-                  ),
-                ],
-              ),
 
-              const SizedBox(height: 24),
-
-              // ── Social Icons (disabled) ───────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildSocialIcon('assets/images/logo_google.png'),
-                  const SizedBox(width: 32),
-                  _buildSocialIcon('assets/images/logo_twitter.png'),
-                  const SizedBox(width: 32),
-                  _buildSocialIcon('assets/images/logo_apple.png'),
-                ],
-              ),
 
               const SizedBox(height: 147),
 
